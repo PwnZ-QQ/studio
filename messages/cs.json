@@ -1,0 +1,49 @@
+{
+  "PermissionsPage": {
+    "title": "Vyžadován přístup ke kameře",
+    "description_denied": "Odepřeli jste přístup ke kameře. Chcete-li tuto funkci používat, povolte prosím oprávnění pro kameru v nastavení prohlížeče.",
+    "description_prompt": "Tato aplikace potřebuje přístup k vaší kameře pro focení a poskytování překladu v reálném čase.",
+    "button": "Povolit kameru"
+  },
+  "CameraUI": {
+    "capture_button_label": "Vyfotit",
+    "mode_qr": "QR",
+    "mode_photo": "Foto",
+    "mode_video": "Video",
+    "mode_ar": "AR",
+    "ar_processing": "Zpracovávám...",
+    "qr_found_title": "QR Kód Nalezen!",
+    "qr_copy_button": "Zkopírovat",
+    "qr_open_link_button": "Otevřít odkaz",
+    "copied_toast_title": "Zkopírováno",
+    "copied_toast_description": "Obsah QR kódu byl zkopírován do schránky.",
+    "camera_error_toast_title": "Chyba kamery",
+    "camera_error_toast_description": "Nepodařilo se získat přístup ke kameře."
+  },
+  "TranslationView": {
+    "title": "Přeložit obrázek",
+    "select_language_placeholder": "Vyberte jazyk",
+    "translate_button": "Přeložit text",
+    "translation_result_title": "Výsledek překladu",
+    "translation_error_toast_title": "Chyba překladu",
+    "languages": {
+      "Czech": "Čeština",
+      "Spanish": "Španělština",
+      "French": "Francouzština",
+      "German": "Němčina",
+      "Japanese": "Japonština",
+      "Chinese": "Čínština",
+      "Russian": "Ruština",
+      "Arabic": "Arabština",
+      "English": "Angličtina"
+    }
+  },
+  "ArSnapshotView": {
+    "title": "AR Snímek",
+    "identified_object_label": "Identifikovaný objekt",
+    "description_label": "Popis"
+  },
+  "HomePage": {
+    "loading": "Načítání..."
+  }
+}

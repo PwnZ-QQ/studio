@@ -1,0 +1,49 @@
+{
+  "PermissionsPage": {
+    "title": "Camera Access Required",
+    "description_denied": "You have denied camera access. To use this feature, please enable camera permissions in your browser settings.",
+    "description_prompt": "This application needs access to your camera for taking photos and providing real-time translation.",
+    "button": "Allow Camera"
+  },
+  "CameraUI": {
+    "capture_button_label": "Take Photo",
+    "mode_qr": "QR",
+    "mode_photo": "Photo",
+    "mode_video": "Video",
+    "mode_ar": "AR",
+    "ar_processing": "Processing...",
+    "qr_found_title": "QR Code Found!",
+    "qr_copy_button": "Copy",
+    "qr_open_link_button": "Open Link",
+    "copied_toast_title": "Copied",
+    "copied_toast_description": "The QR code content has been copied to the clipboard.",
+    "camera_error_toast_title": "Camera Error",
+    "camera_error_toast_description": "Failed to access the camera."
+  },
+  "TranslationView": {
+    "title": "Translate Image",
+    "select_language_placeholder": "Select language",
+    "translate_button": "Translate Text",
+    "translation_result_title": "Translation Result",
+    "translation_error_toast_title": "Translation Error",
+    "languages": {
+      "Czech": "Czech",
+      "Spanish": "Spanish",
+      "French": "French",
+      "German": "German",
+      "Japanese": "Japanese",
+      "Chinese": "Chinese",
+      "Russian": "Russian",
+      "Arabic": "Arabic",
+      "English": "English"
+    }
+  },
+  "ArSnapshotView": {
+    "title": "AR Snapshot",
+    "identified_object_label": "Identified Object",
+    "description_label": "Description"
+  },
+  "HomePage": {
+    "loading": "Loading..."
+  }
+}
