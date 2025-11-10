@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, CameraReverse, Loader2, Video, QrCode } from 'lucide-react';
+import { Camera, SwitchCamera, Loader2, Video, QrCode } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -107,7 +107,7 @@ export default function CameraUI() {
 
         <div className="absolute top-4 right-4">
           <Button variant="ghost" size="icon" onClick={handleFlipCamera} className="text-white bg-black/20 hover:bg-black/40 hover:text-white rounded-full">
-            <CameraReverse className="h-6 w-6" />
+            <SwitchCamera className="h-6 w-6" />
           </Button>
         </div>
       </div>
