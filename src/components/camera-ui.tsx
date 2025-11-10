@@ -178,7 +178,7 @@ export default function CameraUI() {
       reset();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startCamera, stopArMode, stopQrMode, reset, loadModel]);
+  }, [facingMode, startCamera, stopArMode, stopQrMode, reset, loadModel]);
   
   const detectObjects = useCallback(async () => {
     if (model && videoRef.current && videoRef.current.readyState === 4) {
@@ -503,7 +503,7 @@ export default function CameraUI() {
           <ArSnapshotView
               imageSrc={arSnapshot.image}
               label={arSnapshot.label}
-              description={arsnapshot.description}
+              description={arSnapshot.description}
               onBack={() => setArSnapshot(null)}
           />
         )}
@@ -511,3 +511,5 @@ export default function CameraUI() {
     </div>
   );
 }
+
+    
