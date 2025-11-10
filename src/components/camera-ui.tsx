@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
@@ -15,34 +15,43 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useTranslations } from 'next-intl';
 import LanguageSwitcher from './language-switcher';
 import { AnimatePresence, motion } from 'framer-motion';
-
-type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR';
-
-interface ArObject {
-    label: string;
-    description: string;
-}
+import { useCameraStore } from '@/store/camera-store';
 
 export default function CameraUI() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [mode, setMode] = useState<Mode>('PHOTO');
-  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [isCameraReady, setIsCameraReady] = useState(false);
-  const [arObject, setArObject] = useState<ArObject | null>(null);
-  const [isProcessingAr, setIsProcessingAr] = useState(false);
-  const arIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
-  const [arSnapshot, setArSnapshot] = useState<{image: string, label: string, description: string} | null>(null);
-  const lastIdentifiedObject = useRef<string | null>(null);
-  const [zoom, setZoom] = useState(1);
-  const [zoomCapabilities, setZoomCapabilities] = useState<{ min: number; max: number; step: number } | null>(null);
-  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
-  const qrIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [qrCode, setQrCode] = useState<string | null>(null);
   const t = useTranslations('CameraUI');
 
+  const {
+    mode,
+    setMode,
+    facingMode,
+    setFacingMode,
+    capturedImage,
+    setCapturedImage,
+    isCameraReady,
+    setIsCameraReady,
+    arObject,
+    setArObject,
+    isProcessingAr,
+    setIsProcessingAr,
+    arSnapshot,
+    setArSnapshot,
+    zoom,
+    setZoom,
+    zoomCapabilities,
+    setZoomCapabilities,
+    qrCode,
+    setQrCode,
+    videoTrack,
+    setVideoTrack,
+    reset,
+  } = useCameraStore();
+
+  const arIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const qrIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastIdentifiedObject = useRef<string | null>(null);
 
   const startCamera = useCallback(async () => {
     setIsCameraReady(false);
@@ -58,9 +67,10 @@ export default function CameraUI() {
           video: { facingMode: facingMode }
         });
         videoRef.current.srcObject = stream;
-        videoTrackRef.current = stream.getVideoTracks()[0];
+        const track = stream.getVideoTracks()[0];
+        setVideoTrack(track);
         
-        const capabilities = videoTrackRef.current.getCapabilities();
+        const capabilities = track.getCapabilities();
         if ('zoom' in capabilities && capabilities.zoom) {
           setZoomCapabilities({
             min: capabilities.zoom.min,
@@ -84,7 +94,7 @@ export default function CameraUI() {
         }
       }
     }
-  }, [facingMode, t, toast]);
+  }, [facingMode, setIsCameraReady, setVideoTrack, setZoom, setZoomCapabilities, t, toast, setFacingMode]);
 
   const stopArMode = useCallback(() => {
     if (arIntervalRef.current) {
@@ -94,7 +104,7 @@ export default function CameraUI() {
     setArObject(null);
     lastIdentifiedObject.current = null;
     setIsProcessingAr(false);
-  }, []);
+  }, [setArObject, setIsProcessingAr]);
 
   const stopQrMode = useCallback(() => {
     if (qrIntervalRef.current) {
@@ -102,7 +112,7 @@ export default function CameraUI() {
       qrIntervalRef.current = null;
     }
     setQrCode(null);
-  }, []);
+  }, [setQrCode]);
 
   useEffect(() => {
     startCamera();
@@ -112,8 +122,9 @@ export default function CameraUI() {
       }
       stopArMode();
       stopQrMode();
+      reset();
     };
-  }, [startCamera, stopArMode, stopQrMode]);
+  }, [startCamera, stopArMode, stopQrMode, reset]);
   
   const captureFrameForAr = useCallback(async () => {
     if (videoRef.current && canvasRef.current && !isProcessingAr) {
@@ -150,7 +161,7 @@ export default function CameraUI() {
         setIsProcessingAr(false);
       }
     }
-  }, [isProcessingAr]);
+  }, [isProcessingAr, setIsProcessingAr, setArObject]);
 
   const scanQrCode = useCallback(() => {
     if (videoRef.current && canvasRef.current && !qrCode) {
@@ -171,13 +182,12 @@ export default function CameraUI() {
         }
       }
     }
-  }, [qrCode, stopQrMode]);
+  }, [qrCode, stopQrMode, setQrCode]);
 
 
   useEffect(() => {
     stopArMode();
     stopQrMode();
-    setQrCode(null);
     if (mode === 'AR' && isCameraReady) {
       arIntervalRef.current = setInterval(captureFrameForAr, 1500);
     } else if (mode === 'QR' && isCameraReady) {
@@ -190,9 +200,9 @@ export default function CameraUI() {
   }, [mode, isCameraReady, captureFrameForAr, scanQrCode, stopArMode, stopQrMode]);
 
   const handleZoomChange = (newZoom: number) => {
-    if (videoTrackRef.current && zoomCapabilities) {
+    if (videoTrack && zoomCapabilities) {
         try {
-            videoTrackRef.current.applyConstraints({ advanced: [{ zoom: newZoom }] });
+            videoTrack.applyConstraints({ advanced: [{ zoom: newZoom }] });
             setZoom(newZoom);
         } catch (error) {
             console.error('Zoom not supported or value out of range:', error);
@@ -239,6 +249,12 @@ export default function CameraUI() {
         });
     }
   }
+  
+  const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR') => {
+    setArObject(null);
+    setQrCode(null);
+    setMode(newMode);
+  }
 
   const ShutterButton = () => (
     <motion.button
@@ -254,10 +270,10 @@ export default function CameraUI() {
 
   const ModeSwitcher = () => (
     <div className="flex items-center justify-center gap-4 text-sm font-medium text-white/80 bg-black/30 backdrop-blur-sm p-2 rounded-full">
-      <button onClick={() => setMode('QR')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'QR' && 'text-accent font-semibold bg-white/10')}>{t('mode_qr')}</button>
-      <button onClick={() => setMode('PHOTO')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'PHOTO' && 'text-accent font-semibold bg-white/10')}>{t('mode_photo')}</button>
-      <button onClick={() => setMode('VIDEO')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'VIDEO' && 'text-accent font-semibold bg-white/10')}>{t('mode_video')}</button>
-      <button onClick={() => setMode('AR')} className={cn("transition-colors flex items-center gap-1 px-2 py-1 rounded-full", mode === 'AR' && 'text-accent font-semibold bg-white/10')}>
+      <button onClick={() => handleModeChange('QR')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'QR' && 'text-accent font-semibold bg-white/10')}>{t('mode_qr')}</button>
+      <button onClick={() => handleModeChange('PHOTO')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'PHOTO' && 'text-accent font-semibold bg-white/10')}>{t('mode_photo')}</button>
+      <button onClick={() => handleModeChange('VIDEO')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'VIDEO' && 'text-accent font-semibold bg-white/10')}>{t('mode_video')}</button>
+      <button onClick={() => handleModeChange('AR')} className={cn("transition-colors flex items-center gap-1 px-2 py-1 rounded-full", mode === 'AR' && 'text-accent font-semibold bg-white/10')}>
         <Wand2 className="h-4 w-4" /> {t('mode_ar')}
       </button>
     </div>
