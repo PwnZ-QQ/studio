@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { X, Wand2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { ScrollArea } from './ui/scroll-area';
@@ -16,7 +16,7 @@ interface ArSnapshotViewProps {
 
 export default function ArSnapshotView({ imageSrc, label, description, onBack }: ArSnapshotViewProps) {
   const memoizedImage = useMemo(() => (
-    <Image src={imageSrc} alt="AR Snapshot" layout="fill" objectFit="cover" />
+    <Image src={imageSrc} alt="AR Snapshot" fill objectFit="cover" />
   ), [imageSrc]);
 
   return (
@@ -35,7 +35,6 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
           <div className="text-center p-4 bg-muted/50 rounded-lg flex-1 flex flex-col">
             <p className="text-sm text-muted-foreground mb-1">Identifikovaný objekt</p>
             <p className="font-semibold text-lg text-foreground flex items-center justify-center gap-2">
-              <Wand2 className="h-5 w-5 text-accent" />
               {label}
             </p>
             <ScrollArea className="mt-4 text-left flex-1">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy } from 'lucide-react';
+import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -174,6 +174,7 @@ export default function CameraUI() {
   useEffect(() => {
     stopArMode();
     stopQrMode();
+    setQrCode(null);
     if (mode === 'AR' && isCameraReady) {
       arIntervalRef.current = setInterval(captureFrameForAr, 1500);
     } else if (mode === 'QR' && isCameraReady) {
@@ -272,7 +273,7 @@ export default function CameraUI() {
         
         {mode === 'AR' && arObject && (
           <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm flex items-center gap-2">
-            {isProcessingAr && (!arObject || arObject.label !== lastIdentifiedObject.current) ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4 text-accent" />}
+            {isProcessingAr && (!arObject || arObject.label !== lastIdentifiedObject.current) ? <Loader2 className="h-4 w-4 animate-spin"/> : null}
             {arObject.label}
           </div>
         )}
