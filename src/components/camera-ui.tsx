@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Camera, SwitchCamera, Loader2, Video, QrCode } from 'lucide-react';
+import { SwitchCamera, Loader2, Video, QrCode } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
