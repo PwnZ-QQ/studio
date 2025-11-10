@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 import { identifyObject } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
+import ArSnapshotView from './ar-snapshot-view';
 
 type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR';
 
@@ -21,6 +22,7 @@ export default function CameraUI() {
   const [isProcessingAr, setIsProcessingAr] = useState(false);
   const arIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
+  const [arSnapshot, setArSnapshot] = useState<{image: string, label: string} | null>(null);
 
 
   const startCamera = useCallback(async () => {
@@ -93,7 +95,7 @@ export default function CameraUI() {
         setIsProcessingAr(false);
       }
     }
-  }, [isProcessingAr, toast]);
+  }, [isProcessingAr]);
 
   useEffect(() => {
     if (mode === 'AR' && isCameraReady) {
@@ -122,7 +124,12 @@ export default function CameraUI() {
         }
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
-        setCapturedImage(dataUrl);
+        
+        if (mode === 'AR' && arLabel) {
+            setArSnapshot({ image: dataUrl, label: arLabel });
+        } else {
+            setCapturedImage(dataUrl);
+        }
       }
     }
   };
@@ -130,7 +137,7 @@ export default function CameraUI() {
   const ShutterButton = () => (
     <button
       onClick={handleCapture}
-      disabled={!isCameraReady || mode === 'AR'}
+      disabled={!isCameraReady}
       className="w-20 h-20 rounded-full bg-background/30 p-1.5 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       aria-label="Capture photo"
     >
@@ -184,6 +191,14 @@ export default function CameraUI() {
         <TranslationView
           imageSrc={capturedImage}
           onBack={() => setCapturedImage(null)}
+        />
+      )}
+
+      {arSnapshot && mode === 'AR' && (
+        <ArSnapshotView
+            imageSrc={arSnapshot.image}
+            label={arSnapshot.label}
+            onBack={() => setArSnapshot(null)}
         />
       )}
     </div>
