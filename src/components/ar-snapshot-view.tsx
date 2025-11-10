@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { ScrollArea } from './ui/scroll-area';
 import { useTranslations } from 'next-intl';
@@ -18,9 +18,12 @@ interface ArSnapshotViewProps {
 
 export default function ArSnapshotView({ imageSrc, label, description, onBack }: ArSnapshotViewProps) {
   const t = useTranslations('ArSnapshotView');
+  const tCamera = useTranslations('CameraUI');
   const memoizedImage = useMemo(() => (
     <Image src={imageSrc} alt={t('title')} fill objectFit="cover" />
   ), [imageSrc, t]);
+
+  const isProcessing = label === tCamera('ar_processing');
 
   return (
     <motion.div 
@@ -49,13 +52,19 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-lg flex-1 flex flex-col">
               <p className="text-sm text-muted-foreground mb-1">{t('identified_object_label')}</p>
-              <p className="font-semibold text-lg text-foreground flex items-center justify-center gap-2">
-                {label}
-              </p>
-              <p className="text-sm text-muted-foreground mt-4 mb-1">{t('description_label')}</p>
-              <ScrollArea className="mt-1 text-left flex-1">
-                  <p className="text-sm text-foreground/80">{description}</p>
-              </ScrollArea>
+              <div className="font-semibold text-lg text-foreground flex items-center justify-center gap-2">
+                {isProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
+                <p>{label}</p>
+              </div>
+              
+              {!isProcessing && (
+                <>
+                  <p className="text-sm text-muted-foreground mt-4 mb-1">{t('description_label')}</p>
+                  <ScrollArea className="mt-1 text-left flex-1">
+                      <p className="text-sm text-foreground/80">{description}</p>
+                  </ScrollArea>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -63,3 +72,5 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
     </motion.div>
   );
 }
+
+    

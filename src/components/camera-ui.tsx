@@ -135,7 +135,6 @@ export default function CameraUI() {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const scanQrCode = useCallback(() => {
     if (videoRef.current && canvasRef.current && !qrCode) {
       const video = videoRef.current;
@@ -267,16 +266,18 @@ export default function CameraUI() {
         const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
         
         if (mode === 'AR') {
+            // Immediately show the snapshot
+            setArSnapshot({ image: dataUrl, label: t('ar_processing'), description: '' });
+
+            // Then, get the details in the background
             const result = await identifyObject(dataUrl);
-            if (result.identifiedObject && result.description) {
-              setArSnapshot({ image: dataUrl, label: result.identifiedObject, description: result.description });
-            } else {
-              toast({
-                variant: 'destructive',
-                title: 'Object not identified',
-                description: 'Could not identify an object in the snapshot.'
-              })
-            }
+
+            // Update the snapshot with the results
+            setArSnapshot({ 
+              image: dataUrl, 
+              label: result.identifiedObject || 'Object not identified', 
+              description: result.description || 'Could not identify an object in the snapshot.' 
+            });
         } else {
             setCapturedImage(dataUrl);
         }
