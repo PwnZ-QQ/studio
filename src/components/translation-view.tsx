@@ -7,7 +7,6 @@ import { getTranslation } from '@/app/actions';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Textarea } from './ui/textarea';
 import { Loader2, X, Languages, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
