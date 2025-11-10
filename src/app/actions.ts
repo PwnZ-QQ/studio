@@ -54,18 +54,32 @@ const objectIdFormSchema = z.object({
   photoDataUri: z.string().min(1, { message: 'Image data is required.' }),
 });
 
-export async function identifyObject(photoDataUri: string) {
+export async function identifyObject(photoDataUri: string, objectName?: string) {
+    // Use the locale from the request headers to determine the target language.
+    const headersList = headers();
+    const referer = headersList.get('referer');
+    const locale = referer?.split('/')[3] || 'cs';
+    const targetLanguage = locale === 'cs' ? 'Czech' : 'English';
+
+    if (objectName) {
+      try {
+        const result = await describeObject({ objectName, targetLanguage });
+        return {
+            identifiedObject: objectName, // We already have the name from the client
+            description: result.description,
+        };
+      } catch (error) {
+        console.error('Object description failed', error);
+        return { identifiedObject: objectName, error: 'AI object description failed.' };
+      }
+    }
+
+    // Fallback to the old method if no objectName is provided
     const validatedFields = objectIdFormSchema.safeParse({ photoDataUri });
     if (!validatedFields.success) {
         return { error: 'Invalid data' };
     }
     try {
-        // Use the locale from the request headers to determine the target language.
-        const headersList = headers();
-        const referer = headersList.get('referer');
-        const locale = referer?.split('/')[3] || 'cs';
-        const targetLanguage = locale === 'cs' ? 'Czech' : 'English';
-
         const result = await getArObjectDetails({ photoDataUri, targetLanguage });
         return {
             identifiedObject: result.objectName,

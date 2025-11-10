@@ -266,17 +266,19 @@ export default function CameraUI() {
         const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
         
         if (mode === 'AR') {
-            // Immediately show the snapshot
-            setArSnapshot({ image: dataUrl, label: t('ar_processing'), description: '' });
+            const mostLikelyObject = predictions.length > 0 ? predictions.reduce((prev, current) => (prev.score > current.score) ? prev : current) : null;
+            
+            // Immediately show the snapshot with what we have
+            setArSnapshot({ image: dataUrl, label: mostLikelyObject ? mostLikelyObject.class : t('ar_processing'), description: '' });
 
             // Then, get the details in the background
-            const result = await identifyObject(dataUrl);
+            const result = await identifyObject(dataUrl, mostLikelyObject?.class);
 
             // Update the snapshot with the results
             setArSnapshot({ 
               image: dataUrl, 
               label: result.identifiedObject || 'Object not identified', 
-              description: result.description || 'Could not identify an object in the snapshot.' 
+              description: result.description || (result.error ? result.error as string : 'Could not identify an object in the snapshot.')
             });
         } else {
             setCapturedImage(dataUrl);
