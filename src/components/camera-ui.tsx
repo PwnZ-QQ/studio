@@ -135,6 +135,28 @@ export default function CameraUI() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const scanQrCode = useCallback(() => {
+    if (videoRef.current && canvasRef.current && !qrCode) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+        if (code) {
+          setQrCode(code.data);
+          stopQrMode();
+        }
+      }
+    }
+  }, [qrCode, stopQrMode, setQrCode]);
+
   const startQrMode = useCallback(() => {
     stopQrMode();
     if (isCameraReady && !qrCode) {
@@ -162,29 +184,6 @@ export default function CameraUI() {
       setPredictions(detectedObjects);
     }
   }, [model]);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const scanQrCode = useCallback(() => {
-    if (videoRef.current && canvasRef.current && !qrCode) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const context = canvas.getContext('2d');
-
-      if (context) {
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
-
-        if (code) {
-          setQrCode(code.data);
-          stopQrMode();
-        }
-      }
-    }
-  }, [qrCode, stopQrMode, setQrCode]);
-
 
   useEffect(() => {
     stopArMode();
