@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X } from 'lucide-react';
+import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,8 @@ import { Wand2 } from 'lucide-react';
 import { Slider } from './ui/slider';
 import jsQR from 'jsqr';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { useTranslations } from 'next-intl';
+import LanguageSwitcher from './language-switcher';
 
 type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR';
 
@@ -38,6 +40,7 @@ export default function CameraUI() {
   const videoTrackRef = useRef<MediaStreamTrack | null>(null);
   const qrIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const t = useTranslations('CameraUI');
 
 
   const startCamera = useCallback(async () => {
@@ -72,16 +75,15 @@ export default function CameraUI() {
         console.error("Error accessing camera:", err);
         toast({
           variant: "destructive",
-          title: "Chyba kamery",
-          description: "Nepodařilo se získat přístup ke kameře.",
+          title: t('camera_error_toast_title'),
+          description: t('camera_error_toast_description'),
         });
-        // If environment camera fails, try to switch to user camera
         if (facingMode === 'environment') {
           setFacingMode('user');
         }
       }
     }
-  }, [facingMode, toast]);
+  }, [facingMode, t, toast]);
 
   const stopArMode = useCallback(() => {
     if (arIntervalRef.current) {
@@ -231,8 +233,8 @@ export default function CameraUI() {
     if (qrCode) {
         navigator.clipboard.writeText(qrCode);
         toast({
-            title: "Zkopírováno",
-            description: "Obsah QR kódu byl zkopírován do schránky.",
+            title: t('copied_toast_title'),
+            description: t('copied_toast_description'),
         });
     }
   }
@@ -242,7 +244,7 @@ export default function CameraUI() {
       onClick={handleCapture}
       disabled={!isCameraReady || mode === 'QR'}
       className="w-20 h-20 rounded-full bg-background/30 p-1.5 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-      aria-label="Vyfotit"
+      aria-label={t('capture_button_label')}
     >
       <div className="w-full h-full rounded-full bg-background active:scale-95 transition-transform" />
     </button>
@@ -250,11 +252,11 @@ export default function CameraUI() {
 
   const ModeSwitcher = () => (
     <div className="flex items-center justify-center gap-4 text-sm font-medium text-white/80">
-      <button onClick={() => setMode('QR')} className={cn("transition-colors", mode === 'QR' && 'text-accent font-semibold')}>QR</button>
-      <button onClick={() => setMode('PHOTO')} className={cn("text-lg transition-colors", mode === 'PHOTO' && 'text-accent font-semibold')}>Foto</button>
-      <button onClick={() => setMode('VIDEO')} className={cn("transition-colors", mode === 'VIDEO' && 'text-accent font-semibold')}>Video</button>
+      <button onClick={() => setMode('QR')} className={cn("transition-colors", mode === 'QR' && 'text-accent font-semibold')}>{t('mode_qr')}</button>
+      <button onClick={() => setMode('PHOTO')} className={cn("text-lg transition-colors", mode === 'PHOTO' && 'text-accent font-semibold')}>{t('mode_photo')}</button>
+      <button onClick={() => setMode('VIDEO')} className={cn("transition-colors", mode === 'VIDEO' && 'text-accent font-semibold')}>{t('mode_video')}</button>
       <button onClick={() => setMode('AR')} className={cn("transition-colors flex items-center gap-1", mode === 'AR' && 'text-accent font-semibold')}>
-        <Wand2 className="h-4 w-4" /> AR
+        <Wand2 className="h-4 w-4" /> {t('mode_ar')}
       </button>
     </div>
   );
@@ -283,7 +285,7 @@ export default function CameraUI() {
                 <Alert variant="default" className="bg-background/90 backdrop-blur-sm">
                     <QrCode className="h-5 w-5" />
                     <AlertTitle className="flex justify-between items-center">
-                        QR Kód Nalezen!
+                        {t('qr_found_title')}
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setQrCode(null)}>
                             <X className="h-4 w-4" />
                         </Button>
@@ -293,11 +295,11 @@ export default function CameraUI() {
                     </AlertDescription>
                     <div className="mt-4 flex gap-2">
                         <Button onClick={handleCopyQrCode} size="sm" className="w-full">
-                            <Copy className="mr-2 h-4 w-4" /> Zkopírovat
+                            <Copy className="mr-2 h-4 w-4" /> {t('qr_copy_button')}
                         </Button>
                         {qrCode.startsWith('http') && (
                              <Button asChild variant="secondary" size="sm" className="w-full">
-                                <a href={qrCode} target="_blank" rel="noopener noreferrer">Otevřít odkaz</a>
+                                <a href={qrCode} target="_blank" rel="noopener noreferrer">{t('qr_open_link_button')}</a>
                             </Button>
                         )}
                     </div>
@@ -306,6 +308,9 @@ export default function CameraUI() {
         )}
 
 
+        <div className="absolute top-4 left-4 z-10">
+            <LanguageSwitcher />
+        </div>
         <div className="absolute top-4 right-4 z-10">
             <Button variant="ghost" size="icon" onClick={handleFlipCamera} className="text-white bg-black/20 backdrop-blur-sm hover:bg-black/40 hover:text-white rounded-full">
                 <SwitchCamera className="h-6 w-6" />

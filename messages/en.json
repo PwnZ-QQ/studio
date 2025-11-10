@@ -45,5 +45,8 @@
   },
   "HomePage": {
     "loading": "Loading..."
+  },
+  "LanguageSwitcher": {
+    "locale": "{locale, select, cs {Čeština} en {English} other {Unknown}}"
   }
 }

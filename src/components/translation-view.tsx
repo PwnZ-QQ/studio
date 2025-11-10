@@ -9,35 +9,41 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Loader2, X, Languages, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslations, useLocale } from 'next-intl';
 
 interface TranslationViewProps {
   imageSrc: string;
   onBack: () => void;
 }
 
-const languages = [
-  { value: 'Czech', label: 'Čeština' },
-  { value: 'Spanish', label: 'Španělština' },
-  { value: 'French', label: 'Francouzština' },
-  { value: 'German', label: 'Němčina' },
-  { value: 'Japanese', label: 'Japonština' },
-  { value: 'Chinese', label: 'Čínština' },
-  { value: 'Russian', label: 'Ruština' },
-  { value: 'Arabic', label: 'Arabština' },
-  { value: 'English', label: 'Angličtina' },
+const languageList = [
+  { value: 'Czech', labelKey: 'Czech' },
+  { value: 'Spanish', labelKey: 'Spanish' },
+  { value: 'French', labelKey: 'French' },
+  { value: 'German', labelKey: 'German' },
+  { value: 'Japanese', labelKey: 'Japanese' },
+  { value: 'Chinese', labelKey: 'Chinese' },
+  { value: 'Russian', labelKey: 'Russian' },
+  { value: 'Arabic', labelKey: 'Arabic' },
+  { value: 'English', labelKey: 'English' },
 ];
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations('TranslationView');
   return (
     <Button type="submit" disabled={pending} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
       {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Languages className="mr-2 h-4 w-4" />}
-      Přeložit text
+      {t('translate_button')}
     </Button>
   );
 }
 
 export default function TranslationView({ imageSrc, onBack }: TranslationViewProps) {
+  const t = useTranslations('TranslationView');
+  const tLang = useTranslations('TranslationView.languages');
+  const locale = useLocale();
+
   const initialState = { message: '', translatedText: '' };
   const [state, dispatch] = useActionState(getTranslation, initialState);
   const { toast } = useToast();
@@ -46,21 +52,23 @@ export default function TranslationView({ imageSrc, onBack }: TranslationViewPro
     if (state.message && state.message !== 'success') {
       toast({
         variant: "destructive",
-        title: "Chyba překladu",
+        title: t('translation_error_toast_title'),
         description: state.message,
       });
     }
-  }, [state, toast]);
+  }, [state, toast, t]);
 
   const memoizedImage = useMemo(() => (
-    <Image src={imageSrc} alt="Snímek k překladu" fill objectFit="contain" />
-  ), [imageSrc]);
+    <Image src={imageSrc} alt={t('title')} fill objectFit="contain" />
+  ), [imageSrc, t]);
+  
+  const defaultLanguage = languageList.find(l => l.value.toLowerCase().startsWith(locale))?.value || 'Czech';
 
   return (
     <div className="absolute inset-0 bg-black/60 backdrop-blur-md z-10 flex items-center justify-center p-4">
       <Card className="w-full max-w-sm h-[95%] flex flex-col">
         <CardHeader className="relative">
-          <CardTitle>Přeložit obrázek</CardTitle>
+          <CardTitle>{t('title')}</CardTitle>
           <Button variant="ghost" size="icon" className="absolute top-3 right-3 h-8 w-8 rounded-full" onClick={onBack}>
             <X className="h-4 w-4" />
           </Button>
@@ -71,14 +79,14 @@ export default function TranslationView({ imageSrc, onBack }: TranslationViewPro
           </div>
           <form action={dispatch} className="flex flex-col gap-4">
             <input type="hidden" name="photoDataUri" value={imageSrc} />
-            <Select name="targetLanguage" defaultValue="Czech" required>
+            <Select name="targetLanguage" defaultValue={defaultLanguage} required>
               <SelectTrigger>
-                <SelectValue placeholder="Vyberte jazyk" />
+                <SelectValue placeholder={t('select_language_placeholder')} />
               </SelectTrigger>
               <SelectContent>
-                {languages.map(lang => (
+                {languageList.map(lang => (
                   <SelectItem key={lang.value} value={lang.value}>
-                    {lang.label}
+                    {tLang(lang.labelKey as any)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -89,7 +97,7 @@ export default function TranslationView({ imageSrc, onBack }: TranslationViewPro
             <div className="mt-4 p-4 bg-accent/10 border border-accent/20 rounded-lg">
                 <h3 className="font-semibold text-accent-foreground flex items-center gap-2 mb-2">
                     <CheckCircle className="h-5 w-5 text-accent"/>
-                    Výsledek překladu
+                    {t('translation_result_title')}
                 </h3>
                 <p className="text-sm text-foreground">{state.translatedText}</p>
             </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import useCameraPermission, { type PermissionState } from '@/hooks/use-camera-permission';
+import useCameraPermission from '@/hooks/use-camera-permission';
 import PermissionsPage from '@/components/permissions-page';
 import CameraUI from '@/components/camera-ui';
 import { Loader2 } from 'lucide-react';
