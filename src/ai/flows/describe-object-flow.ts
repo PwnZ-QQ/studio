@@ -13,6 +13,7 @@ import {z} from 'genkit';
 
 const DescribeObjectInputSchema = z.object({
   objectName: z.string().describe('The name of the object to describe.'),
+  targetLanguage: z.string().default('Czech').describe('The language for the description.'),
 });
 export type DescribeObjectInput = z.infer<typeof DescribeObjectInputSchema>;
 
@@ -29,7 +30,7 @@ const prompt = ai.definePrompt({
   name: 'describeObjectPrompt',
   input: {schema: DescribeObjectInputSchema},
   output: {schema: DescribeObjectOutputSchema},
-  prompt: `You are a helpful assistant. Provide a short, one-paragraph description of the following object: {{{objectName}}}`,
+  prompt: `You are a helpful assistant. Provide a short, one-paragraph description of the following object: {{{objectName}}}. The description should be in {{{targetLanguage}}}.`,
 });
 
 const describeObjectFlow = ai.defineFlow(

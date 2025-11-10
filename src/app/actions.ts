@@ -57,9 +57,9 @@ export async function identifyObject(photoDataUri: string) {
         return { error: 'Invalid data' };
     }
     try {
-        const idResult = await objectIdentification({ photoDataUri });
+        const idResult = await objectIdentification({ photoDataUri, targetLanguage: 'Czech' });
         if (idResult.identifiedObject) {
-            const descResult = await describeObject({ objectName: idResult.identifiedObject });
+            const descResult = await describeObject({ objectName: idResult.identifiedObject, targetLanguage: 'Czech' });
             return {
                 identifiedObject: idResult.identifiedObject,
                 description: descResult.description,

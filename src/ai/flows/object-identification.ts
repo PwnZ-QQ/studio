@@ -17,6 +17,7 @@ const ObjectIdentificationInputSchema = z.object({
     .describe(
       "A photo of an object to identify, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+    targetLanguage: z.string().default('Czech').describe('The language to translate the object name into.'),
 });
 export type ObjectIdentificationInput = z.infer<typeof ObjectIdentificationInputSchema>;
 
@@ -33,9 +34,9 @@ const prompt = ai.definePrompt({
   name: 'objectIdentificationPrompt',
   input: {schema: ObjectIdentificationInputSchema},
   output: {schema: ObjectIdentificationOutputSchema},
-  prompt: `You are an object identification AI. You will be given an image of an object. You will identify the object in the image and return its name.
+  prompt: `You are an object identification AI. You will be given an image of an object. You will identify the object in the image and return its name, translated into the specified language.
 
-Identify the object in the following image.
+Identify the object in the following image and translate its name to {{{targetLanguage}}}.
 
 Image: {{media url=photoDataUri}}
 `,
