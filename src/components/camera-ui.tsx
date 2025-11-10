@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
@@ -309,9 +309,13 @@ export default function CameraUI() {
       aria-label={t('capture_button_label')}
       whileTap={{ scale: 0.9 }}
     >
-      <div className={cn("w-full h-full rounded-full bg-background",
-        isRecording && "bg-red-500 animate-pulse"
-      )} />
+      <motion.div className={cn("w-full h-full rounded-full bg-background")}
+        animate={{ 
+          scale: isRecording ? 0.6 : 1,
+          borderRadius: isRecording ? '20%' : '50%'
+        }}
+        transition={{ duration: 0.2 }}
+      />
     </motion.button>
   );
 
@@ -333,11 +337,11 @@ export default function CameraUI() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
     >
-        <div className="w-full max-w-sm rounded-lg overflow-hidden">
-            <video src={recordedVideo!} controls autoPlay className="w-full"></video>
+        <div className="w-full max-w-sm rounded-lg overflow-hidden shadow-2xl border-2 border-neutral-700">
+            <video src={recordedVideo!} controls autoPlay className="w-full aspect-video"></video>
         </div>
-        <div className="flex gap-4 mt-4">
-            <Button onClick={() => setRecordedVideo(null)} variant="secondary">
+        <div className="flex gap-4 mt-6">
+            <Button onClick={() => setRecordedVideo(null)} variant="outline" className="bg-background/80">
                 <X className="mr-2 h-4 w-4" /> Zpět
             </Button>
             <Button asChild>
@@ -465,3 +469,5 @@ export default function CameraUI() {
     </div>
   );
 }
+
+    
