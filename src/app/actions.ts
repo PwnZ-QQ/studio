@@ -5,6 +5,8 @@ import { objectIdentification } from '@/ai/flows/object-identification';
 import { describeObject } from '@/ai/flows/describe-object-flow';
 import { getArObjectDetails } from '@/ai/flows/get-ar-object-details';
 import { z } from 'zod';
+import {NextRequest} from 'next/server';
+import {headers} from 'next/headers';
 
 const translationFormSchema = z.object({
   photoDataUri: z.string().min(1, { message: 'Image data is required.' }),
@@ -58,7 +60,13 @@ export async function identifyObject(photoDataUri: string) {
         return { error: 'Invalid data' };
     }
     try {
-        const result = await getArObjectDetails({ photoDataUri, targetLanguage: 'Czech' });
+        // Use the locale from the request headers to determine the target language.
+        const headersList = headers();
+        const referer = headersList.get('referer');
+        const locale = referer?.split('/')[3] || 'cs';
+        const targetLanguage = locale === 'cs' ? 'Czech' : 'English';
+
+        const result = await getArObjectDetails({ photoDataUri, targetLanguage });
         return {
             identifiedObject: result.objectName,
             description: result.description,
