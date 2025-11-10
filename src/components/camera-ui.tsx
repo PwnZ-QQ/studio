@@ -85,6 +85,7 @@ export default function CameraUI() {
             setArLabel(result.identifiedObject);
           } else if (result.error) {
             // Don't show toast for AR mode to avoid spamming
+            // We also don't clear the label here to prevent flickering
           }
         } catch (error) {
           // Don't show toast for AR mode to avoid spamming
