@@ -66,13 +66,18 @@ export default function CameraUI() {
         }
       } catch (err) {
         console.error("Error accessing camera:", err);
+        toast({
+          variant: "destructive",
+          title: "Chyba kamery",
+          description: "Nepodařilo se získat přístup ke kameře.",
+        });
         // If environment camera fails, try to switch to user camera
         if (facingMode === 'environment') {
           setFacingMode('user');
         }
       }
     }
-  }, [facingMode]);
+  }, [facingMode, toast]);
 
   const stopArMode = useCallback(() => {
     if (arIntervalRef.current) {
@@ -152,6 +157,7 @@ export default function CameraUI() {
   };
 
   const handleFlipCamera = () => {
+    stopArMode();
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
