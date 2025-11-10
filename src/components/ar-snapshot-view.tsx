@@ -23,7 +23,7 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
     <Image src={imageSrc} alt={t('title')} fill objectFit="cover" />
   ), [imageSrc, t]);
 
-  const isProcessing = label === tCamera('ar_processing');
+  const isProcessing = label === tCamera('ar_processing') || description === '';
 
   return (
     <motion.div 
@@ -58,7 +58,7 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
         <div className="text-center p-4 bg-muted/50 rounded-lg flex-1 flex flex-col">
           <p className="text-sm text-muted-foreground mb-1">{t('identified_object_label')}</p>
           <div className="font-semibold text-lg text-foreground flex items-center justify-center gap-2">
-            {isProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
+            {isProcessing && label !== 'Object not identified' ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
             <p>{label}</p>
           </div>
           

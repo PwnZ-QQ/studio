@@ -268,18 +268,23 @@ export default function CameraUI() {
         if (mode === 'AR') {
             const mostLikelyObject = predictions.length > 0 ? predictions.reduce((prev, current) => (prev.score > current.score) ? prev : current) : null;
             
-            // Immediately show the snapshot with what we have
             setArSnapshot({ image: dataUrl, label: mostLikelyObject ? mostLikelyObject.class : t('ar_processing'), description: '' });
 
-            // Then, get the details in the background
             const result = await identifyObject(dataUrl, mostLikelyObject?.class);
-
-            // Update the snapshot with the results
-            setArSnapshot({ 
-              image: dataUrl, 
-              label: result.identifiedObject || 'Object not identified', 
-              description: result.description || (result.error ? result.error as string : 'Could not identify an object in the snapshot.')
-            });
+            
+            if (result.identifiedObject) {
+                setArSnapshot({ 
+                  image: dataUrl, 
+                  label: result.identifiedObject, 
+                  description: result.description || (result.error ? result.error as string : 'Could not get a description.')
+                });
+            } else {
+                setArSnapshot({ 
+                    image: dataUrl, 
+                    label: 'Object not identified', 
+                    description: 'Could not identify an object in the snapshot.'
+                });
+            }
         } else {
             setCapturedImage(dataUrl);
         }
@@ -503,5 +508,3 @@ export default function CameraUI() {
     </div>
   );
 }
-
-    
