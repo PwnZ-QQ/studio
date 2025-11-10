@@ -14,6 +14,7 @@ import jsQR from 'jsqr';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useTranslations } from 'next-intl';
 import LanguageSwitcher from './language-switcher';
+import { AnimatePresence, motion } from 'framer-motion';
 
 type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR';
 
@@ -60,7 +61,7 @@ export default function CameraUI() {
         videoTrackRef.current = stream.getVideoTracks()[0];
         
         const capabilities = videoTrackRef.current.getCapabilities();
-        if ('zoom' in capabilities) {
+        if ('zoom' in capabilities && capabilities.zoom) {
           setZoomCapabilities({
             min: capabilities.zoom.min,
             max: capabilities.zoom.max,
@@ -240,14 +241,15 @@ export default function CameraUI() {
   }
 
   const ShutterButton = () => (
-    <button
+    <motion.button
       onClick={handleCapture}
       disabled={!isCameraReady || mode === 'QR'}
       className="w-20 h-20 rounded-full bg-background/30 p-1.5 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       aria-label={t('capture_button_label')}
+      whileTap={{ scale: 0.9 }}
     >
-      <div className="w-full h-full rounded-full bg-background active:scale-95 transition-transform" />
-    </button>
+      <div className="w-full h-full rounded-full bg-background" />
+    </motion.button>
   );
 
   const ModeSwitcher = () => (
@@ -273,15 +275,28 @@ export default function CameraUI() {
           </div>
         )}
         
+        <AnimatePresence>
         {mode === 'AR' && arObject && (
-          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm flex items-center gap-2">
+          <motion.div 
+            className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm flex items-center gap-2"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+          >
             {isProcessingAr && (!arObject || arObject.label !== lastIdentifiedObject.current) ? <Loader2 className="h-4 w-4 animate-spin"/> : null}
             {arObject.label}
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
 
+        <AnimatePresence>
         {mode === 'QR' && qrCode && (
-            <div className="absolute inset-x-4 top-14 z-20">
+            <motion.div 
+              className="absolute inset-x-4 top-14 z-20"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
                 <Alert variant="default" className="bg-background/90 backdrop-blur-sm">
                     <QrCode className="h-5 w-5" />
                     <AlertTitle className="flex justify-between items-center">
@@ -304,8 +319,9 @@ export default function CameraUI() {
                         )}
                     </div>
                 </Alert>
-            </div>
+            </motion.div>
         )}
+        </AnimatePresence>
 
 
         <div className="absolute top-4 left-4 z-10">
@@ -337,22 +353,24 @@ export default function CameraUI() {
         <ModeSwitcher />
         <ShutterButton />
       </div>
+      
+      <AnimatePresence>
+        {capturedImage && mode === 'PHOTO' && (
+          <TranslationView
+            imageSrc={capturedImage}
+            onBack={() => setCapturedImage(null)}
+          />
+        )}
 
-      {capturedImage && mode === 'PHOTO' && (
-        <TranslationView
-          imageSrc={capturedImage}
-          onBack={() => setCapturedImage(null)}
-        />
-      )}
-
-      {arSnapshot && mode === 'AR' && (
-        <ArSnapshotView
-            imageSrc={arSnapshot.image}
-            label={arSnapshot.label}
-            description={arSnapshot.description}
-            onBack={() => setArSnapshot(null)}
-        />
-      )}
+        {arSnapshot && mode === 'AR' && (
+          <ArSnapshotView
+              imageSrc={arSnapshot.image}
+              label={arSnapshot.label}
+              description={arSnapshot.description}
+              onBack={() => setArSnapshot(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
