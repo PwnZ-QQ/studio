@@ -2,6 +2,7 @@
 
 import { realTimeTextTranslation } from '@/ai/flows/real-time-text-translation';
 import { objectIdentification } from '@/ai/flows/object-identification';
+import { describeObject } from '@/ai/flows/describe-object-flow';
 import { z } from 'zod';
 
 const translationFormSchema = z.object({
@@ -56,10 +57,17 @@ export async function identifyObject(photoDataUri: string) {
         return { error: 'Invalid data' };
     }
     try {
-        const result = await objectIdentification({ photoDataUri });
-        return { identifiedObject: result.identifiedObject };
+        const idResult = await objectIdentification({ photoDataUri });
+        if (idResult.identifiedObject) {
+            const descResult = await describeObject({ objectName: idResult.identifiedObject });
+            return {
+                identifiedObject: idResult.identifiedObject,
+                description: descResult.description,
+            };
+        }
+        return { identifiedObject: null, description: null };
     } catch (error) {
-        console.error('Object ID failed', error);
-        return { error: 'AI object identification failed.' };
+        console.error('Object ID or description failed', error);
+        return { error: 'AI object identification or description failed.' };
     }
 }

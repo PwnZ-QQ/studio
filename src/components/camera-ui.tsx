@@ -1,15 +1,21 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { SwitchCamera, Loader2, Video, QrCode, Wand2 } from 'lucide-react';
+import { SwitchCamera, Loader2 } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 import { identifyObject } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ArSnapshotView from './ar-snapshot-view';
+import { Wand2 } from 'lucide-react';
 
 type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR';
+
+interface ArObject {
+    label: string;
+    description: string;
+}
 
 export default function CameraUI() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -18,11 +24,11 @@ export default function CameraUI() {
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isCameraReady, setIsCameraReady] = useState(false);
-  const [arLabel, setArLabel] = useState<string | null>(null);
+  const [arObject, setArObject] = useState<ArObject | null>(null);
   const [isProcessingAr, setIsProcessingAr] = useState(false);
   const arIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
-  const [arSnapshot, setArSnapshot] = useState<{image: string, label: string} | null>(null);
+  const [arSnapshot, setArSnapshot] = useState<{image: string, label: string, description: string} | null>(null);
 
 
   const startCamera = useCallback(async () => {
@@ -53,7 +59,7 @@ export default function CameraUI() {
       clearInterval(arIntervalRef.current);
       arIntervalRef.current = null;
     }
-    setArLabel(null);
+    setArObject(null);
     setIsProcessingAr(false);
   }, []);
 
@@ -81,11 +87,10 @@ export default function CameraUI() {
         
         try {
           const result = await identifyObject(dataUrl);
-          if(result.identifiedObject) {
-            setArLabel(result.identifiedObject);
+          if(result.identifiedObject && result.description) {
+            setArObject({ label: result.identifiedObject, description: result.description });
           } else if (result.error) {
             // Don't show toast for AR mode to avoid spamming
-            // We also don't clear the label here to prevent flickering
           }
         } catch (error) {
           // Don't show toast for AR mode to avoid spamming
@@ -126,8 +131,8 @@ export default function CameraUI() {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg');
         
-        if (mode === 'AR' && arLabel) {
-            setArSnapshot({ image: dataUrl, label: arLabel });
+        if (mode === 'AR' && arObject) {
+            setArSnapshot({ image: dataUrl, label: arObject.label, description: arObject.description });
         } else {
             setCapturedImage(dataUrl);
         }
@@ -169,10 +174,10 @@ export default function CameraUI() {
           </div>
         )}
         
-        {mode === 'AR' && arLabel && (
+        {mode === 'AR' && arObject && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm flex items-center gap-2">
             {isProcessingAr ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4" />}
-            {arLabel}
+            {arObject.label}
           </div>
         )}
 
@@ -199,6 +204,7 @@ export default function CameraUI() {
         <ArSnapshotView
             imageSrc={arSnapshot.image}
             label={arSnapshot.label}
+            description={arSnapshot.description}
             onBack={() => setArSnapshot(null)}
         />
       )}

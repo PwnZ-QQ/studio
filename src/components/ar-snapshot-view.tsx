@@ -5,14 +5,16 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { X, Wand2 } from 'lucide-react';
 import { useMemo } from 'react';
+import { ScrollArea } from './ui/scroll-area';
 
 interface ArSnapshotViewProps {
   imageSrc: string;
   label: string;
+  description: string;
   onBack: () => void;
 }
 
-export default function ArSnapshotView({ imageSrc, label, onBack }: ArSnapshotViewProps) {
+export default function ArSnapshotView({ imageSrc, label, description, onBack }: ArSnapshotViewProps) {
   const memoizedImage = useMemo(() => (
     <Image src={imageSrc} alt="AR Snapshot" layout="fill" objectFit="cover" />
   ), [imageSrc]);
@@ -30,12 +32,15 @@ export default function ArSnapshotView({ imageSrc, label, onBack }: ArSnapshotVi
           <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden bg-muted">
             {memoizedImage}
           </div>
-          <div className="text-center p-4 bg-muted/50 rounded-lg">
+          <div className="text-center p-4 bg-muted/50 rounded-lg flex-1 flex flex-col">
             <p className="text-sm text-muted-foreground mb-1">Identified Object</p>
             <p className="font-semibold text-lg text-foreground flex items-center justify-center gap-2">
               <Wand2 className="h-5 w-5 text-accent" />
               {label}
             </p>
+            <ScrollArea className="mt-4 text-left flex-1">
+                <p className="text-sm text-foreground/80">{description}</p>
+            </ScrollArea>
           </div>
         </CardContent>
       </Card>
