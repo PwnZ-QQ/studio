@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { SwitchCamera, Loader2 } from 'lucide-react';
+import { SwitchCamera, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -9,6 +9,7 @@ import { identifyObject } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ArSnapshotView from './ar-snapshot-view';
 import { Wand2 } from 'lucide-react';
+import { Slider } from './ui/slider';
 
 type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR';
 
@@ -30,10 +31,16 @@ export default function CameraUI() {
   const { toast } = useToast();
   const [arSnapshot, setArSnapshot] = useState<{image: string, label: string, description: string} | null>(null);
   const lastIdentifiedObject = useRef<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [zoomCapabilities, setZoomCapabilities] = useState<{ min: number; max: number; step: number } | null>(null);
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
 
 
   const startCamera = useCallback(async () => {
     setIsCameraReady(false);
+    setZoomCapabilities(null);
+    setZoom(1);
+
     if (videoRef.current) {
       if (videoRef.current.srcObject) {
         (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
@@ -43,11 +50,23 @@ export default function CameraUI() {
           video: { facingMode: facingMode }
         });
         videoRef.current.srcObject = stream;
+        videoTrackRef.current = stream.getVideoTracks()[0];
+        
+        const capabilities = videoTrackRef.current.getCapabilities();
+        if ('zoom' in capabilities) {
+          setZoomCapabilities({
+            min: capabilities.zoom.min,
+            max: capabilities.zoom.max,
+            step: capabilities.zoom.step,
+          });
+        }
+        
         videoRef.current.onloadedmetadata = () => {
           setIsCameraReady(true);
         }
       } catch (err) {
         console.error("Error accessing camera:", err);
+        // If environment camera fails, try to switch to user camera
         if (facingMode === 'environment') {
           setFacingMode('user');
         }
@@ -121,6 +140,17 @@ export default function CameraUI() {
     return () => stopArMode();
   }, [mode, isCameraReady, captureFrameForAr, stopArMode]);
 
+  const handleZoomChange = (newZoom: number) => {
+    if (videoTrackRef.current && zoomCapabilities) {
+        try {
+            videoTrackRef.current.applyConstraints({ advanced: [{ zoom: newZoom }] });
+            setZoom(newZoom);
+        } catch (error) {
+            console.error('Zoom not supported or value out of range:', error);
+        }
+    }
+  };
+
   const handleFlipCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
@@ -138,7 +168,7 @@ export default function CameraUI() {
           context.scale(-1, 1);
         }
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
         
         if (mode === 'AR' && arObject) {
             setArSnapshot({ image: dataUrl, label: arObject.label, description: arObject.description });
@@ -173,7 +203,7 @@ export default function CameraUI() {
 
   return (
     <div className="h-full w-full bg-black flex flex-col">
-      <div className="relative flex-1">
+      <div className="relative flex-1 overflow-hidden">
         <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover" />
         <canvas ref={canvasRef} className="hidden" />
 
@@ -184,8 +214,8 @@ export default function CameraUI() {
         )}
         
         {mode === 'AR' && arObject && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm flex items-center gap-2">
-            {isProcessingAr && (!arObject || arObject.label !== lastIdentifiedObject.current) ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4" />}
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm flex items-center gap-2">
+            {isProcessingAr && (!arObject || arObject.label !== lastIdentifiedObject.current) ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4 text-accent" />}
             {arObject.label}
           </div>
         )}
@@ -195,6 +225,21 @@ export default function CameraUI() {
                 <SwitchCamera className="h-6 w-6" />
             </Button>
         </div>
+
+        {zoomCapabilities && (
+          <div className="absolute bottom-4 left-4 right-4 z-10 flex items-center gap-2">
+            <ZoomOut className="h-5 w-5 text-white" />
+            <Slider
+              min={zoomCapabilities.min}
+              max={zoomCapabilities.max}
+              step={zoomCapabilities.step}
+              value={[zoom]}
+              onValueChange={(value) => handleZoomChange(value[0])}
+              className="w-full"
+            />
+            <ZoomIn className="h-5 w-5 text-white" />
+          </div>
+        )}
       </div>
 
       <div className="h-40 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-4">
@@ -220,5 +265,3 @@ export default function CameraUI() {
     </div>
   );
 }
-
-    
