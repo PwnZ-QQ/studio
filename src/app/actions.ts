@@ -4,6 +4,7 @@ import { realTimeTextTranslation } from '@/ai/flows/real-time-text-translation';
 import { objectIdentification } from '@/ai/flows/object-identification';
 import { describeObject } from '@/ai/flows/describe-object-flow';
 import { getArObjectDetails } from '@/ai/flows/get-ar-object-details';
+import { textToSpeech } from '@/ai/flows/text-to-speech';
 import { z } from 'zod';
 import {NextRequest} from 'next/server';
 import {headers} from 'next/headers';
@@ -96,5 +97,25 @@ export async function identifyObject(photoDataUri: string, objectNameFromClient?
             description: 'Could not get a description for this object.',
             error: 'AI object description failed.' 
         };
+    }
+}
+
+const textToSpeechSchema = z.object({
+  text: z.string(),
+});
+
+export async function textToSpeechAction(text: string): Promise<{ audio: string } | { error: string }> {
+    const validatedFields = textToSpeechSchema.safeParse({ text });
+
+    if (!validatedFields.success) {
+        return { error: 'Invalid data' };
+    }
+
+    try {
+        const result = await textToSpeech({ text: validatedFields.data.text });
+        return { audio: result.audio };
+    } catch (error) {
+        console.error('Text-to-speech failed', error);
+        return { error: 'Text-to-speech conversion failed.' };
     }
 }
