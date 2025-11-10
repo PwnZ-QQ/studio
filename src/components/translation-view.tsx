@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useActionState } from 'react';
+import { useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { useFormStatus } from 'react-dom';
+import { useFormStatus, useActionState } from 'react-dom';
 import { getTranslation } from '@/app/actions';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -51,7 +51,7 @@ export default function TranslationView({ imageSrc, onBack }: TranslationViewPro
   }, [state, toast]);
 
   const memoizedImage = useMemo(() => (
-    <Image src={imageSrc} alt="Captured for translation" layout="fill" objectFit="contain" />
+    <Image src={imageSrc} alt="Captured for translation" fill objectFit="contain" />
   ), [imageSrc]);
 
   return (
