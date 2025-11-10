@@ -29,6 +29,7 @@ export default function CameraUI() {
   const arIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const [arSnapshot, setArSnapshot] = useState<{image: string, label: string, description: string} | null>(null);
+  const lastIdentifiedObject = useRef<string | null>(null);
 
 
   const startCamera = useCallback(async () => {
@@ -60,6 +61,7 @@ export default function CameraUI() {
       arIntervalRef.current = null;
     }
     setArObject(null);
+    lastIdentifiedObject.current = null;
     setIsProcessingAr(false);
   }, []);
 
@@ -78,17 +80,24 @@ export default function CameraUI() {
       setIsProcessingAr(true);
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      
+      const MAX_WIDTH = 640;
+      const scale = MAX_WIDTH / video.videoWidth;
+      canvas.width = MAX_WIDTH;
+      canvas.height = video.videoHeight * scale;
+
       const context = canvas.getContext('2d');
       if (context) {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg');
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         
         try {
           const result = await identifyObject(dataUrl);
-          if(result.identifiedObject && result.description) {
-            setArObject({ label: result.identifiedObject, description: result.description });
+          if (result.identifiedObject && result.description) {
+              if (result.identifiedObject !== lastIdentifiedObject.current) {
+                  setArObject({ label: result.identifiedObject, description: result.description });
+                  lastIdentifiedObject.current = result.identifiedObject;
+              }
           } else if (result.error) {
             // Don't show toast for AR mode to avoid spamming
           }
@@ -105,7 +114,7 @@ export default function CameraUI() {
 
   useEffect(() => {
     if (mode === 'AR' && isCameraReady) {
-      arIntervalRef.current = setInterval(captureFrameForAr, 2000);
+      arIntervalRef.current = setInterval(captureFrameForAr, 1500);
     } else {
       stopArMode();
     }
@@ -176,7 +185,7 @@ export default function CameraUI() {
         
         {mode === 'AR' && arObject && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-2 rounded-full text-sm font-medium backdrop-blur-sm flex items-center gap-2">
-            {isProcessingAr ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4" />}
+            {isProcessingAr && (!arObject || arObject.label !== lastIdentifiedObject.current) ? <Loader2 className="h-4 w-4 animate-spin"/> : <Wand2 className="h-4 w-4" />}
             {arObject.label}
           </div>
         )}
