@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
-import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages } from 'lucide-react';
+import { useRef, useEffect, useCallback, useState } from 'react';
+import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -20,6 +20,9 @@ import { useCameraStore } from '@/store/camera-store';
 export default function CameraUI() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+
   const { toast } = useToast();
   const t = useTranslations('CameraUI');
 
@@ -46,6 +49,10 @@ export default function CameraUI() {
     setQrCode,
     videoTrack,
     setVideoTrack,
+    isRecording,
+    setIsRecording,
+    recordedVideo,
+    setRecordedVideo,
     reset,
   } = useCameraStore();
 
@@ -216,7 +223,42 @@ export default function CameraUI() {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
+  const startRecording = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      recordedChunksRef.current = [];
+      const stream = videoRef.current.srcObject as MediaStream;
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        setRecordedVideo(url);
+      };
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
+
   const handleCapture = () => {
+    if (mode === 'VIDEO') {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+      return;
+    }
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -253,6 +295,7 @@ export default function CameraUI() {
   const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR') => {
     setArObject(null);
     setQrCode(null);
+    if(isRecording) stopRecording();
     setMode(newMode);
   }
 
@@ -260,11 +303,15 @@ export default function CameraUI() {
     <motion.button
       onClick={handleCapture}
       disabled={!isCameraReady || mode === 'QR'}
-      className="w-20 h-20 rounded-full bg-background/30 p-1.5 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+      className={cn("w-20 h-20 rounded-full bg-background/30 p-1.5 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        isRecording && "p-0"
+      )}
       aria-label={t('capture_button_label')}
       whileTap={{ scale: 0.9 }}
     >
-      <div className="w-full h-full rounded-full bg-background" />
+      <div className={cn("w-full h-full rounded-full bg-background",
+        isRecording && "bg-red-500 animate-pulse"
+      )} />
     </motion.button>
   );
 
@@ -277,6 +324,29 @@ export default function CameraUI() {
         <Wand2 className="h-4 w-4" /> {t('mode_ar')}
       </button>
     </div>
+  );
+
+  const VideoPreview = () => (
+    <motion.div
+        className="absolute inset-0 bg-black/60 backdrop-blur-md z-20 flex flex-col items-center justify-center p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+    >
+        <div className="w-full max-w-sm rounded-lg overflow-hidden">
+            <video src={recordedVideo!} controls autoPlay className="w-full"></video>
+        </div>
+        <div className="flex gap-4 mt-4">
+            <Button onClick={() => setRecordedVideo(null)} variant="secondary">
+                <X className="mr-2 h-4 w-4" /> Zpět
+            </Button>
+            <Button asChild>
+              <a href={recordedVideo!} download="video.webm">
+                <Download className="mr-2 h-4 w-4" /> Stáhnout
+              </a>
+            </Button>
+        </div>
+    </motion.div>
   );
 
   return (
@@ -337,6 +407,10 @@ export default function CameraUI() {
                 </Alert>
             </motion.div>
         )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {recordedVideo && <VideoPreview />}
         </AnimatePresence>
 
 

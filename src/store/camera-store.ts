@@ -36,6 +36,10 @@ interface CameraState {
   setQrCode: (qrCode: string | null) => void;
   videoTrack: MediaStreamTrack | null;
   setVideoTrack: (track: MediaStreamTrack | null) => void;
+  isRecording: boolean;
+  setIsRecording: (isRecording: boolean) => void;
+  recordedVideo: string | null;
+  setRecordedVideo: (video: string | null) => void;
   reset: () => void;
 }
 
@@ -51,6 +55,8 @@ const initialState = {
     zoomCapabilities: null,
     qrCode: null,
     videoTrack: null,
+    isRecording: false,
+    recordedVideo: null,
 };
 
 export const useCameraStore = create<CameraState>((set) => ({
@@ -66,5 +72,7 @@ export const useCameraStore = create<CameraState>((set) => ({
   setZoomCapabilities: (capabilities) => set({ zoomCapabilities: capabilities }),
   setQrCode: (qrCode) => set({ qrCode }),
   setVideoTrack: (track) => set({ videoTrack: track }),
+  setIsRecording: (isRecording) => set({ isRecording }),
+  setRecordedVideo: (video) => set({ recordedVideo: video }),
   reset: () => set(initialState),
 }));
