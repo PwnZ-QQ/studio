@@ -133,8 +133,14 @@ export default function CameraUI() {
       clearInterval(qrIntervalRef.current);
       qrIntervalRef.current = null;
     }
-    setQrCode(null);
-  }, [setQrCode]);
+  }, []);
+
+  const startQrMode = useCallback(() => {
+    stopQrMode();
+    if (isCameraReady && !qrCode) {
+        qrIntervalRef.current = setInterval(scanQrCode, 500);
+    }
+  }, [isCameraReady, qrCode, stopQrMode, scanQrCode]);
 
   useEffect(() => {
     loadModel();
@@ -147,6 +153,7 @@ export default function CameraUI() {
       stopQrMode();
       reset();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startCamera, stopArMode, stopQrMode, reset, loadModel]);
   
   const detectObjects = useCallback(async () => {
@@ -156,6 +163,7 @@ export default function CameraUI() {
     }
   }, [model]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const scanQrCode = useCallback(() => {
     if (videoRef.current && canvasRef.current && !qrCode) {
       const video = videoRef.current;
@@ -184,13 +192,13 @@ export default function CameraUI() {
     if (mode === 'AR' && isCameraReady && model) {
       detectionIntervalRef.current = setInterval(detectObjects, 100);
     } else if (mode === 'QR' && isCameraReady) {
-      qrIntervalRef.current = setInterval(scanQrCode, 500);
+      startQrMode();
     }
     return () => {
       stopArMode();
       stopQrMode();
     }
-  }, [mode, isCameraReady, model, detectObjects, scanQrCode, stopArMode, stopQrMode]);
+  }, [mode, isCameraReady, model, detectObjects, stopArMode, stopQrMode, startQrMode]);
 
   const handleZoomChange = (newZoom: number) => {
     if (videoTrack && zoomCapabilities) {
@@ -286,6 +294,11 @@ export default function CameraUI() {
         });
     }
   }
+
+  const handleDismissQrCode = () => {
+    setQrCode(null);
+    startQrMode();
+  };
   
   const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR') => {
     setPredictions([]);
@@ -410,7 +423,7 @@ export default function CameraUI() {
                     <QrCode className="h-5 w-5" />
                     <AlertTitle className="flex justify-between items-center">
                         {t('qr_found_title')}
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setQrCode(null)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleDismissQrCode}>
                             <X className="h-4 w-4" />
                         </Button>
                     </AlertTitle>
