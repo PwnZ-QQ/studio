@@ -54,39 +54,47 @@ const objectIdFormSchema = z.object({
   photoDataUri: z.string().min(1, { message: 'Image data is required.' }),
 });
 
-export async function identifyObject(photoDataUri: string, objectName?: string) {
-    // Use the locale from the request headers to determine the target language.
+export async function identifyObject(photoDataUri: string, objectNameFromClient?: string) {
     const headersList = headers();
     const referer = headersList.get('referer');
     const locale = referer?.split('/')[3] || 'cs';
     const targetLanguage = locale === 'cs' ? 'Czech' : 'English';
 
-    if (objectName) {
-      try {
-        const result = await describeObject({ objectName, targetLanguage });
-        return {
-            identifiedObject: objectName, // We already have the name from the client
-            description: result.description,
-        };
-      } catch (error) {
-        console.error('Object description failed', error);
-        return { identifiedObject: objectName, error: 'AI object description failed.' };
-      }
+    let objectNameToDescribe = objectNameFromClient;
+
+    if (!objectNameToDescribe) {
+        const validatedFields = objectIdFormSchema.safeParse({ photoDataUri });
+        if (!validatedFields.success) {
+            return { error: 'Invalid data' };
+        }
+        try {
+            const identificationResult = await objectIdentification({ photoDataUri, targetLanguage });
+            objectNameToDescribe = identificationResult.identifiedObject;
+        } catch (error) {
+            console.error('Object identification from image failed', error);
+            // We can still proceed without a name, description will also fail, but the snapshot view will be shown
+        }
     }
 
-    // Fallback to image analysis if no objectName is provided from client-side detection
-    const validatedFields = objectIdFormSchema.safeParse({ photoDataUri });
-    if (!validatedFields.success) {
-        return { error: 'Invalid data' };
+    if (!objectNameToDescribe) {
+        return { 
+            identifiedObject: 'Object not identified', 
+            description: 'Could not identify an object in the snapshot.', 
+        };
     }
+
     try {
-        const result = await getArObjectDetails({ photoDataUri, targetLanguage });
+        const descriptionResult = await describeObject({ objectName: objectNameToDescribe, targetLanguage });
         return {
-            identifiedObject: result.objectName,
-            description: result.description,
+            identifiedObject: objectNameToDescribe,
+            description: descriptionResult.description,
         };
     } catch (error) {
-        console.error('Object ID or description failed', error);
-        return { error: 'AI object identification or description failed.' };
+        console.error('Object description failed', error);
+        return { 
+            identifiedObject: objectNameToDescribe, 
+            description: 'Could not get a description for this object.',
+            error: 'AI object description failed.' 
+        };
     }
 }
