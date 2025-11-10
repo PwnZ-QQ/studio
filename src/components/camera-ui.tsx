@@ -145,7 +145,7 @@ export default function CameraUI() {
       onClick={handleCapture}
       disabled={!isCameraReady}
       className="w-20 h-20 rounded-full bg-background/30 p-1.5 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
-      aria-label="Capture photo"
+      aria-label="Vyfotit"
     >
       <div className="w-full h-full rounded-full bg-background active:scale-95 transition-transform" />
     </button>
@@ -154,7 +154,7 @@ export default function CameraUI() {
   const ModeSwitcher = () => (
     <div className="flex items-center justify-center gap-4 text-sm font-medium text-white/80">
       <button onClick={() => setMode('QR')} className={cn("transition-colors", mode === 'QR' && 'text-accent font-semibold')}>QR</button>
-      <button onClick={() => setMode('PHOTO')} className={cn("text-lg transition-colors", mode === 'PHOTO' && 'text-accent font-semibold')}>Photo</button>
+      <button onClick={() => setMode('PHOTO')} className={cn("text-lg transition-colors", mode === 'PHOTO' && 'text-accent font-semibold')}>Foto</button>
       <button onClick={() => setMode('VIDEO')} className={cn("transition-colors", mode === 'VIDEO' && 'text-accent font-semibold')}>Video</button>
       <button onClick={() => setMode('AR')} className={cn("transition-colors flex items-center gap-1", mode === 'AR' && 'text-accent font-semibold')}>
         <Wand2 className="h-4 w-4" /> AR

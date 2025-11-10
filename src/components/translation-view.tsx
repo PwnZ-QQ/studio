@@ -16,13 +16,15 @@ interface TranslationViewProps {
 }
 
 const languages = [
-  { value: 'Spanish', label: 'Spanish' },
-  { value: 'French', label: 'French' },
-  { value: 'German', label: 'German' },
-  { value: 'Japanese', label: 'Japanese' },
-  { value: 'Chinese', label: 'Chinese' },
-  { value: 'Russian', label: 'Russian' },
-  { value: 'Arabic', label: 'Arabic' },
+  { value: 'Czech', label: 'Čeština' },
+  { value: 'Spanish', label: 'Španělština' },
+  { value: 'French', label: 'Francouzština' },
+  { value: 'German', label: 'Němčina' },
+  { value: 'Japanese', label: 'Japonština' },
+  { value: 'Chinese', label: 'Čínština' },
+  { value: 'Russian', label: 'Ruština' },
+  { value: 'Arabic', label: 'Arabština' },
+  { value: 'English', label: 'Angličtina' },
 ];
 
 function SubmitButton() {
@@ -30,7 +32,7 @@ function SubmitButton() {
   return (
     <Button type="submit" disabled={pending} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
       {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Languages className="mr-2 h-4 w-4" />}
-      Translate Text
+      Přeložit text
     </Button>
   );
 }
@@ -44,21 +46,21 @@ export default function TranslationView({ imageSrc, onBack }: TranslationViewPro
     if (state.message && state.message !== 'success') {
       toast({
         variant: "destructive",
-        title: "Translation Error",
+        title: "Chyba překladu",
         description: state.message,
       });
     }
   }, [state, toast]);
 
   const memoizedImage = useMemo(() => (
-    <Image src={imageSrc} alt="Captured for translation" fill objectFit="contain" />
+    <Image src={imageSrc} alt="Snímek k překladu" fill objectFit="contain" />
   ), [imageSrc]);
 
   return (
     <div className="absolute inset-0 bg-black/60 backdrop-blur-md z-10 flex items-center justify-center p-4">
       <Card className="w-full max-w-sm h-[95%] flex flex-col">
         <CardHeader className="relative">
-          <CardTitle>Translate Image</CardTitle>
+          <CardTitle>Přeložit obrázek</CardTitle>
           <Button variant="ghost" size="icon" className="absolute top-3 right-3 h-8 w-8 rounded-full" onClick={onBack}>
             <X className="h-4 w-4" />
           </Button>
@@ -69,9 +71,9 @@ export default function TranslationView({ imageSrc, onBack }: TranslationViewPro
           </div>
           <form action={dispatch} className="flex flex-col gap-4">
             <input type="hidden" name="photoDataUri" value={imageSrc} />
-            <Select name="targetLanguage" defaultValue="Spanish" required>
+            <Select name="targetLanguage" defaultValue="Czech" required>
               <SelectTrigger>
-                <SelectValue placeholder="Select a language" />
+                <SelectValue placeholder="Vyberte jazyk" />
               </SelectTrigger>
               <SelectContent>
                 {languages.map(lang => (
@@ -87,7 +89,7 @@ export default function TranslationView({ imageSrc, onBack }: TranslationViewPro
             <div className="mt-4 p-4 bg-accent/10 border border-accent/20 rounded-lg">
                 <h3 className="font-semibold text-accent-foreground flex items-center gap-2 mb-2">
                     <CheckCircle className="h-5 w-5 text-accent"/>
-                    Translation Result
+                    Výsledek překladu
                 </h3>
                 <p className="text-sm text-foreground">{state.translatedText}</p>
             </div>

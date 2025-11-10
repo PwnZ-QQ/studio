@@ -23,7 +23,7 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
     <div className="absolute inset-0 bg-black/60 backdrop-blur-md z-10 flex items-center justify-center p-4">
       <Card className="w-full max-w-sm h-[95%] flex flex-col">
         <CardHeader className="relative pb-2">
-          <CardTitle>AR Snapshot</CardTitle>
+          <CardTitle>AR Snímek</CardTitle>
           <Button variant="ghost" size="icon" className="absolute top-3 right-3 h-8 w-8 rounded-full" onClick={onBack}>
             <X className="h-4 w-4" />
           </Button>
@@ -33,7 +33,7 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
             {memoizedImage}
           </div>
           <div className="text-center p-4 bg-muted/50 rounded-lg flex-1 flex flex-col">
-            <p className="text-sm text-muted-foreground mb-1">Identified Object</p>
+            <p className="text-sm text-muted-foreground mb-1">Identifikovaný objekt</p>
             <p className="font-semibold text-lg text-foreground flex items-center justify-center gap-2">
               <Wand2 className="h-5 w-5 text-accent" />
               {label}
