@@ -253,11 +253,11 @@ export default function CameraUI() {
   );
 
   const ModeSwitcher = () => (
-    <div className="flex items-center justify-center gap-4 text-sm font-medium text-white/80">
-      <button onClick={() => setMode('QR')} className={cn("transition-colors", mode === 'QR' && 'text-accent font-semibold')}>{t('mode_qr')}</button>
-      <button onClick={() => setMode('PHOTO')} className={cn("text-lg transition-colors", mode === 'PHOTO' && 'text-accent font-semibold')}>{t('mode_photo')}</button>
-      <button onClick={() => setMode('VIDEO')} className={cn("transition-colors", mode === 'VIDEO' && 'text-accent font-semibold')}>{t('mode_video')}</button>
-      <button onClick={() => setMode('AR')} className={cn("transition-colors flex items-center gap-1", mode === 'AR' && 'text-accent font-semibold')}>
+    <div className="flex items-center justify-center gap-4 text-sm font-medium text-white/80 bg-black/30 backdrop-blur-sm p-2 rounded-full">
+      <button onClick={() => setMode('QR')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'QR' && 'text-accent font-semibold bg-white/10')}>{t('mode_qr')}</button>
+      <button onClick={() => setMode('PHOTO')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'PHOTO' && 'text-accent font-semibold bg-white/10')}>{t('mode_photo')}</button>
+      <button onClick={() => setMode('VIDEO')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'VIDEO' && 'text-accent font-semibold bg-white/10')}>{t('mode_video')}</button>
+      <button onClick={() => setMode('AR')} className={cn("transition-colors flex items-center gap-1 px-2 py-1 rounded-full", mode === 'AR' && 'text-accent font-semibold bg-white/10')}>
         <Wand2 className="h-4 w-4" /> {t('mode_ar')}
       </button>
     </div>
@@ -278,7 +278,7 @@ export default function CameraUI() {
         <AnimatePresence>
         {mode === 'AR' && arObject && (
           <motion.div 
-            className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm flex items-center gap-2"
+            className="absolute bottom-40 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm flex items-center gap-2"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
@@ -334,7 +334,7 @@ export default function CameraUI() {
         </div>
 
         {zoomCapabilities && (
-          <div className="absolute bottom-4 left-4 right-4 z-10 flex items-center gap-2">
+          <div className="absolute bottom-28 left-4 right-4 z-10 flex items-center gap-2">
             <ZoomOut className="h-5 w-5 text-white" />
             <Slider
               min={zoomCapabilities.min}
@@ -347,11 +347,12 @@ export default function CameraUI() {
             <ZoomIn className="h-5 w-5 text-white" />
           </div>
         )}
-      </div>
+        
+        <div className="absolute bottom-4 left-0 right-0 z-10 flex flex-col items-center justify-center gap-4">
+            <ShutterButton />
+            <ModeSwitcher />
+        </div>
 
-      <div className="h-40 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-4">
-        <ModeSwitcher />
-        <ShutterButton />
       </div>
       
       <AnimatePresence>
