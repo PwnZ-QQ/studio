@@ -22,10 +22,6 @@ interface CameraState {
   setCapturedImage: (image: string | null) => void;
   isCameraReady: boolean;
   setIsCameraReady: (isReady: boolean) => void;
-  arObject: ArObject | null;
-  setArObject: (arObject: ArObject | null) => void;
-  isProcessingAr: boolean;
-  setIsProcessingAr: (isProcessing: boolean) => void;
   arSnapshot: { image: string; label: string; description: string } | null;
   setArSnapshot: (snapshot: { image: string; label: string; description: string } | null) => void;
   zoom: number;
@@ -48,8 +44,6 @@ const initialState = {
     facingMode: 'environment' as 'user' | 'environment',
     capturedImage: null,
     isCameraReady: false,
-    arObject: null,
-    isProcessingAr: false,
     arSnapshot: null,
     zoom: 1,
     zoomCapabilities: null,
@@ -65,8 +59,6 @@ export const useCameraStore = create<CameraState>((set) => ({
   setFacingMode: (facingMode) => set(state => ({ facingMode: typeof facingMode === 'function' ? facingMode(state.facingMode) : facingMode })),
   setCapturedImage: (image) => set({ capturedImage: image }),
   setIsCameraReady: (isReady) => set({ isCameraReady: isReady }),
-  setArObject: (arObject) => set({ arObject }),
-  setIsProcessingAr: (isProcessing) => set({ isProcessingAr: isProcessing }),
   setArSnapshot: (snapshot) => set({ arSnapshot: snapshot }),
   setZoom: (zoom) => set({ zoom }),
   setZoomCapabilities: (capabilities) => set({ zoomCapabilities: capabilities }),

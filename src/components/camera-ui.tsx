@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
@@ -16,6 +16,10 @@ import { useTranslations } from 'next-intl';
 import LanguageSwitcher from './language-switcher';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCameraStore } from '@/store/camera-store';
+import * as tf from '@tensorflow/tfjs';
+import * as cocoSsd from '@tensorflow-models/coco-ssd';
+
+type Prediction = cocoSsd.DetectedObject;
 
 export default function CameraUI() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -35,10 +39,6 @@ export default function CameraUI() {
     setCapturedImage,
     isCameraReady,
     setIsCameraReady,
-    arObject,
-    setArObject,
-    isProcessingAr,
-    setIsProcessingAr,
     arSnapshot,
     setArSnapshot,
     zoom,
@@ -56,9 +56,26 @@ export default function CameraUI() {
     reset,
   } = useCameraStore();
 
-  const arIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [model, setModel] = useState<cocoSsd.ObjectDetection | null>(null);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const qrIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastIdentifiedObject = useRef<string | null>(null);
+
+  const loadModel = useCallback(async () => {
+    try {
+      await tf.ready();
+      const loadedModel = await cocoSsd.load();
+      setModel(loadedModel);
+    } catch (err) {
+      console.error("Failed to load model", err);
+      toast({
+        variant: "destructive",
+        title: "AI Model Error",
+        description: "Could not load the object detection model.",
+      });
+    }
+  }, [toast]);
 
   const startCamera = useCallback(async () => {
     setIsCameraReady(false);
@@ -104,14 +121,12 @@ export default function CameraUI() {
   }, [facingMode, setIsCameraReady, setVideoTrack, setZoom, setZoomCapabilities, t, toast, setFacingMode]);
 
   const stopArMode = useCallback(() => {
-    if (arIntervalRef.current) {
-      clearInterval(arIntervalRef.current);
-      arIntervalRef.current = null;
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
     }
-    setArObject(null);
-    lastIdentifiedObject.current = null;
-    setIsProcessingAr(false);
-  }, [setArObject, setIsProcessingAr]);
+    setPredictions([]);
+  }, []);
 
   const stopQrMode = useCallback(() => {
     if (qrIntervalRef.current) {
@@ -122,6 +137,7 @@ export default function CameraUI() {
   }, [setQrCode]);
 
   useEffect(() => {
+    loadModel();
     startCamera();
     return () => {
       if (videoRef.current && videoRef.current.srcObject) {
@@ -131,44 +147,14 @@ export default function CameraUI() {
       stopQrMode();
       reset();
     };
-  }, [startCamera, stopArMode, stopQrMode, reset]);
+  }, [startCamera, stopArMode, stopQrMode, reset, loadModel]);
   
-  const captureFrameForAr = useCallback(async () => {
-    if (videoRef.current && canvasRef.current && !isProcessingAr) {
-      setIsProcessingAr(true);
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      
-      const MAX_WIDTH = 640;
-      const scale = MAX_WIDTH / video.videoWidth;
-      canvas.width = MAX_WIDTH;
-      canvas.height = video.videoHeight * scale;
-
-      const context = canvas.getContext('2d');
-      if (context) {
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        
-        try {
-          const result = await identifyObject(dataUrl);
-          if (result.identifiedObject && result.description) {
-              if (result.identifiedObject !== lastIdentifiedObject.current) {
-                  setArObject({ label: result.identifiedObject, description: result.description });
-                  lastIdentifiedObject.current = result.identifiedObject;
-              }
-          } else if (result.error) {
-            // Don't show toast for AR mode to avoid spamming
-          }
-        } catch (error) {
-          // Don't show toast for AR mode to avoid spamming
-        } finally {
-          setIsProcessingAr(false);
-        }
-      } else {
-        setIsProcessingAr(false);
-      }
+  const detectObjects = useCallback(async () => {
+    if (model && videoRef.current && videoRef.current.readyState === 4) {
+      const detectedObjects = await model.detect(videoRef.current);
+      setPredictions(detectedObjects);
     }
-  }, [isProcessingAr, setIsProcessingAr, setArObject]);
+  }, [model]);
 
   const scanQrCode = useCallback(() => {
     if (videoRef.current && canvasRef.current && !qrCode) {
@@ -195,8 +181,8 @@ export default function CameraUI() {
   useEffect(() => {
     stopArMode();
     stopQrMode();
-    if (mode === 'AR' && isCameraReady) {
-      arIntervalRef.current = setInterval(captureFrameForAr, 1500);
+    if (mode === 'AR' && isCameraReady && model) {
+      detectionIntervalRef.current = setInterval(detectObjects, 100);
     } else if (mode === 'QR' && isCameraReady) {
       qrIntervalRef.current = setInterval(scanQrCode, 500);
     }
@@ -204,7 +190,7 @@ export default function CameraUI() {
       stopArMode();
       stopQrMode();
     }
-  }, [mode, isCameraReady, captureFrameForAr, scanQrCode, stopArMode, stopQrMode]);
+  }, [mode, isCameraReady, model, detectObjects, scanQrCode, stopArMode, stopQrMode]);
 
   const handleZoomChange = (newZoom: number) => {
     if (videoTrack && zoomCapabilities) {
@@ -250,7 +236,7 @@ export default function CameraUI() {
     }
   };
 
-  const handleCapture = () => {
+  const handleCapture = async () => {
     if (mode === 'VIDEO') {
       if (isRecording) {
         stopRecording();
@@ -273,8 +259,17 @@ export default function CameraUI() {
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
         
-        if (mode === 'AR' && arObject) {
-            setArSnapshot({ image: dataUrl, label: arObject.label, description: arObject.description });
+        if (mode === 'AR') {
+            const result = await identifyObject(dataUrl);
+            if (result.identifiedObject && result.description) {
+              setArSnapshot({ image: dataUrl, label: result.identifiedObject, description: result.description });
+            } else {
+              toast({
+                variant: 'destructive',
+                title: 'Object not identified',
+                description: 'Could not identify an object in the snapshot.'
+              })
+            }
         } else {
             setCapturedImage(dataUrl);
         }
@@ -293,7 +288,7 @@ export default function CameraUI() {
   }
   
   const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR') => {
-    setArObject(null);
+    setPredictions([]);
     setQrCode(null);
     if(isRecording) stopRecording();
     setMode(newMode);
@@ -302,7 +297,7 @@ export default function CameraUI() {
   const ShutterButton = () => (
     <motion.button
       onClick={handleCapture}
-      disabled={!isCameraReady || mode === 'QR'}
+      disabled={!isCameraReady || mode === 'QR' || (mode === 'AR' && !model)}
       className={cn("w-20 h-20 rounded-full bg-background/30 p-1.5 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
         isRecording && "p-0"
       )}
@@ -353,31 +348,55 @@ export default function CameraUI() {
     </motion.div>
   );
 
+  const ArObjectBoxes = () => {
+    if (!videoRef.current) return null;
+    const { videoWidth, videoHeight } = videoRef.current;
+    const { offsetWidth, offsetHeight } = videoRef.current;
+    const scaleX = offsetWidth / videoWidth;
+    const scaleY = offsetHeight / videoHeight;
+
+    return predictions.map((prediction, index) => {
+        const [x, y, width, height] = prediction.bbox;
+        const isPerson = prediction.class === 'person';
+        const borderColor = isPerson ? 'border-red-500' : 'border-accent';
+
+        return (
+            <div
+                key={index}
+                className={cn('absolute border-2', borderColor)}
+                style={{
+                    left: `${x * scaleX}px`,
+                    top: `${y * scaleY}px`,
+                    width: `${width * scaleX}px`,
+                    height: `${height * scaleY}px`,
+                }}
+            >
+                <p className={cn('absolute -top-6 left-0 text-sm font-semibold px-1 rounded', isPerson ? 'bg-red-500 text-white' : 'bg-accent text-accent-foreground')}>
+                    {prediction.class} ({(prediction.score * 100).toFixed(1)}%)
+                </p>
+            </div>
+        );
+    });
+};
+
   return (
     <div className="h-full w-full bg-black flex flex-col">
       <div className="relative flex-1 overflow-hidden">
         <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover" />
         <canvas ref={canvasRef} className="hidden" />
 
-        {!isCameraReady && (
+        {(!isCameraReady || (mode === 'AR' && !model)) && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-            <Loader2 className="h-8 w-8 animate-spin text-white" />
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-white" />
+              <p className="text-white text-sm font-medium">
+                {mode === 'AR' && !model ? 'Nahrávám AI model...' : 'Nahrávám kameru...'}
+              </p>
+            </div>
           </div>
         )}
         
-        <AnimatePresence>
-        {mode === 'AR' && arObject && (
-          <motion.div 
-            className="absolute bottom-40 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm font-medium backdrop-blur-sm flex items-center gap-2"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-          >
-            {isProcessingAr && (!arObject || arObject.label !== lastIdentifiedObject.current) ? <Loader2 className="h-4 w-4 animate-spin"/> : null}
-            {arObject.label}
-          </motion.div>
-        )}
-        </AnimatePresence>
+        {mode === 'AR' && isCameraReady && model && <ArObjectBoxes />}
 
         <AnimatePresence>
         {mode === 'QR' && qrCode && (
