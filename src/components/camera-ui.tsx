@@ -88,7 +88,10 @@ export default function CameraUI() {
       }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facingMode }
+          video: { 
+            facingMode: facingMode,
+            advanced: [{ focusMode: 'continuous' }]
+          }
         });
         videoRef.current.srcObject = stream;
         const track = stream.getVideoTracks()[0];
@@ -266,28 +269,28 @@ export default function CameraUI() {
         const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
         
         if (mode === 'AR') {
-            const mostLikelyObject = predictions.length > 0 ? predictions.reduce((prev, current) => (prev.score > current.score) ? prev : current) : null;
-            
-            setArSnapshot({ image: dataUrl, label: mostLikelyObject ? mostLikelyObject.class : t('ar_processing'), description: '' });
+          const mostLikelyObject = predictions.length > 0 ? predictions.reduce((prev, current) => (prev.score > current.score) ? prev : current) : null;
+          
+          setArSnapshot({ image: dataUrl, label: mostLikelyObject ? mostLikelyObject.class : t('ar_processing'), description: '' });
 
-            const result = await identifyObject(dataUrl, mostLikelyObject?.class);
-            
-            if (result.identifiedObject) {
-                setArSnapshot({ 
-                  image: dataUrl, 
-                  label: result.identifiedObject, 
-                  description: result.description || (result.error ? result.error as string : 'Could not get a description.')
-                });
-            } else {
-                setArSnapshot({ 
-                    image: dataUrl, 
-                    label: 'Object not identified', 
-                    description: 'Could not identify an object in the snapshot.'
-                });
-            }
-        } else {
-            setCapturedImage(dataUrl);
-        }
+          identifyObject(dataUrl, mostLikelyObject?.class).then(result => {
+              if (result.identifiedObject) {
+                  setArSnapshot({
+                      image: dataUrl,
+                      label: result.identifiedObject,
+                      description: result.description || (result.error ? result.error as string : 'Could not get a description.')
+                  });
+              } else {
+                  setArSnapshot({
+                      image: dataUrl,
+                      label: 'Object not identified',
+                      description: 'Could not identify an object in the snapshot.'
+                  });
+              }
+          });
+      } else {
+          setCapturedImage(dataUrl);
+      }
       }
     }
   };
@@ -500,7 +503,7 @@ export default function CameraUI() {
           <ArSnapshotView
               imageSrc={arSnapshot.image}
               label={arSnapshot.label}
-              description={arSnapshot.description}
+              description={arsnapshot.description}
               onBack={() => setArSnapshot(null)}
           />
         )}
