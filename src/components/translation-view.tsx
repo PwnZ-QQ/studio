@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useActionState } from 'react';
 import Image from 'next/image';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
 import { getTranslation } from '@/app/actions';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -38,7 +38,7 @@ function SubmitButton() {
 
 export default function TranslationView({ imageSrc, onBack }: TranslationViewProps) {
   const initialState = { message: '', translatedText: '' };
-  const [state, dispatch] = useFormState(getTranslation, initialState);
+  const [state, dispatch] = useActionState(getTranslation, initialState);
   const { toast } = useToast();
 
   useEffect(() => {
