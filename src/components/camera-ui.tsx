@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { SwitchCamera, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
+import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import ArSnapshotView from './ar-snapshot-view';
 import { Wand2 } from 'lucide-react';
 import { Slider } from './ui/slider';
+import jsQR from 'jsqr';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR';
 
@@ -34,6 +36,8 @@ export default function CameraUI() {
   const [zoom, setZoom] = useState(1);
   const [zoomCapabilities, setZoomCapabilities] = useState<{ min: number; max: number; step: number } | null>(null);
   const videoTrackRef = useRef<MediaStreamTrack | null>(null);
+  const qrIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
 
 
   const startCamera = useCallback(async () => {
@@ -89,6 +93,14 @@ export default function CameraUI() {
     setIsProcessingAr(false);
   }, []);
 
+  const stopQrMode = useCallback(() => {
+    if (qrIntervalRef.current) {
+      clearInterval(qrIntervalRef.current);
+      qrIntervalRef.current = null;
+    }
+    setQrCode(null);
+  }, []);
+
   useEffect(() => {
     startCamera();
     return () => {
@@ -96,8 +108,9 @@ export default function CameraUI() {
         (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
       }
       stopArMode();
+      stopQrMode();
     };
-  }, [startCamera, stopArMode]);
+  }, [startCamera, stopArMode, stopQrMode]);
   
   const captureFrameForAr = useCallback(async () => {
     if (videoRef.current && canvasRef.current && !isProcessingAr) {
@@ -136,14 +149,41 @@ export default function CameraUI() {
     }
   }, [isProcessingAr]);
 
+  const scanQrCode = useCallback(() => {
+    if (videoRef.current && canvasRef.current && !qrCode) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+        if (code) {
+          setQrCode(code.data);
+          stopQrMode();
+        }
+      }
+    }
+  }, [qrCode, stopQrMode]);
+
+
   useEffect(() => {
+    stopArMode();
+    stopQrMode();
     if (mode === 'AR' && isCameraReady) {
       arIntervalRef.current = setInterval(captureFrameForAr, 1500);
-    } else {
-      stopArMode();
+    } else if (mode === 'QR' && isCameraReady) {
+      qrIntervalRef.current = setInterval(scanQrCode, 500);
     }
-    return () => stopArMode();
-  }, [mode, isCameraReady, captureFrameForAr, stopArMode]);
+    return () => {
+      stopArMode();
+      stopQrMode();
+    }
+  }, [mode, isCameraReady, captureFrameForAr, scanQrCode, stopArMode, stopQrMode]);
 
   const handleZoomChange = (newZoom: number) => {
     if (videoTrackRef.current && zoomCapabilities) {
@@ -158,6 +198,7 @@ export default function CameraUI() {
 
   const handleFlipCamera = () => {
     stopArMode();
+    stopQrMode();
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
@@ -185,10 +226,20 @@ export default function CameraUI() {
     }
   };
 
+  const handleCopyQrCode = () => {
+    if (qrCode) {
+        navigator.clipboard.writeText(qrCode);
+        toast({
+            title: "Zkopírováno",
+            description: "Obsah QR kódu byl zkopírován do schránky.",
+        });
+    }
+  }
+
   const ShutterButton = () => (
     <button
       onClick={handleCapture}
-      disabled={!isCameraReady}
+      disabled={!isCameraReady || mode === 'QR'}
       className="w-20 h-20 rounded-full bg-background/30 p-1.5 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       aria-label="Vyfotit"
     >
@@ -225,6 +276,34 @@ export default function CameraUI() {
             {arObject.label}
           </div>
         )}
+
+        {mode === 'QR' && qrCode && (
+            <div className="absolute inset-x-4 top-14 z-20">
+                <Alert variant="default" className="bg-background/90 backdrop-blur-sm">
+                    <QrCode className="h-5 w-5" />
+                    <AlertTitle className="flex justify-between items-center">
+                        QR Kód Nalezen!
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setQrCode(null)}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </AlertTitle>
+                    <AlertDescription className="break-all mt-2">
+                        {qrCode}
+                    </AlertDescription>
+                    <div className="mt-4 flex gap-2">
+                        <Button onClick={handleCopyQrCode} size="sm" className="w-full">
+                            <Copy className="mr-2 h-4 w-4" /> Zkopírovat
+                        </Button>
+                        {qrCode.startsWith('http') && (
+                             <Button asChild variant="secondary" size="sm" className="w-full">
+                                <a href={qrCode} target="_blank" rel="noopener noreferrer">Otevřít odkaz</a>
+                            </Button>
+                        )}
+                    </div>
+                </Alert>
+            </div>
+        )}
+
 
         <div className="absolute top-4 right-4 z-10">
             <Button variant="ghost" size="icon" onClick={handleFlipCamera} className="text-white bg-black/20 backdrop-blur-sm hover:bg-black/40 hover:text-white rounded-full">
