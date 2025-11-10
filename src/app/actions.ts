@@ -74,7 +74,7 @@ export async function identifyObject(photoDataUri: string, objectName?: string) 
       }
     }
 
-    // Fallback to the old method if no objectName is provided
+    // Fallback to image analysis if no objectName is provided from client-side detection
     const validatedFields = objectIdFormSchema.safeParse({ photoDataUri });
     if (!validatedFields.success) {
         return { error: 'Invalid data' };
