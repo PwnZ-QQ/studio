@@ -314,7 +314,7 @@ export default function CameraUI() {
                         </Button>
                         {qrCode.startsWith('http') && (
                              <Button asChild variant="secondary" size="sm" className="w-full">
-                                <a href={qrCode} target="_blank" rel="noopener noreferrer">{t('qr_open_link_button')}</a>
+                                <a href={qrCode} target="_blank" rel="noopener noreferrer">{t('open_link_button')}</a>
                             </Button>
                         )}
                     </div>
