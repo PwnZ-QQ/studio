@@ -138,7 +138,7 @@ export default function CameraUI() {
           context.scale(-1, 1);
         }
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL('image/jpeg');
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
         
         if (mode === 'AR' && arObject) {
             setArSnapshot({ image: dataUrl, label: arObject.label, description: arObject.description });
@@ -220,3 +220,5 @@ export default function CameraUI() {
     </div>
   );
 }
+
+    
