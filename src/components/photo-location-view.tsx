@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
-import type L from 'leaflet';
+import type { Map as LeafletMap } from 'leaflet';
 
 // Fix for default icon path issue with webpack
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
@@ -72,6 +72,23 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
     <Image src={imageSrc} alt={t('title')} fill objectFit="cover" />
   ), [imageSrc, t]);
 
+  const mapComponent = useMemo(() => {
+    if (!isClient || !position) return null;
+    return (
+        <MapContainer center={position} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+            <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <Marker position={position}>
+                <Popup>
+                   {t('popup_text')}
+                </Popup>
+            </Marker>
+        </MapContainer>
+    );
+  }, [isClient, position, t]);
+
   return (
     <motion.div
       className="absolute inset-0 bg-black/60 backdrop-blur-md z-10 flex flex-col items-center justify-end p-4 gap-4"
@@ -106,19 +123,7 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
             {t('location_title')}
         </h3>
         <div className="h-48 w-full rounded-md overflow-hidden bg-muted">
-            {isClient && position && (
-                <MapContainer center={position} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-                    <TileLayer
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    />
-                    <Marker position={position}>
-                        <Popup>
-                           {t('popup_text')}
-                        </Popup>
-                    </Marker>
-                </MapContainer>
-            )}
+            {mapComponent}
             {isClient && error && <div className="h-full w-full flex items-center justify-center text-sm text-destructive">{t('location_error')}</div>}
             {isClient && !position && !error && (
                 <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
