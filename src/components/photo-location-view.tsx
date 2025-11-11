@@ -8,9 +8,7 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
-import type { Map as LeafletMap } from 'leaflet';
 
-// Fix for default icon path issue with webpack
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
@@ -25,11 +23,46 @@ type Position = {
   lng: number;
 };
 
-// Dynamically import map components to avoid SSR issues
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
 const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+
+function Map({ position }: { position: Position }) {
+    const t = useTranslations('PhotoLocationView');
+
+    useEffect(() => {
+        (async () => {
+            const L = (await import('leaflet')).default;
+            const DefaultIcon = L.icon({
+                iconRetinaUrl: iconRetinaUrl.src,
+                iconUrl: iconUrl.src,
+                shadowUrl: shadowUrl.src,
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                tooltipAnchor: [16, -28],
+                shadowSize: [41, 41],
+            });
+            L.Marker.prototype.options.icon = DefaultIcon;
+        })();
+    }, []);
+
+    return (
+        <MapContainer center={position} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+            <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <Marker position={position}>
+                <Popup>
+                   {t('popup_text')}
+                </Popup>
+            </Marker>
+        </MapContainer>
+    );
+}
+
 
 export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationViewProps) {
   const t = useTranslations('PhotoLocationView');
@@ -49,45 +82,11 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
       },
       { enableHighAccuracy: true }
     );
-    
-    // This is a hack to fix the default icon issue with Leaflet in Next.js
-    (async () => {
-        const L = (await import('leaflet')).default;
-        const DefaultIcon = L.icon({
-            iconRetinaUrl: iconRetinaUrl.src,
-            iconUrl: iconUrl.src,
-            shadowUrl: shadowUrl.src,
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            tooltipAnchor: [16, -28],
-            shadowSize: [41, 41],
-        });
-        L.Marker.prototype.options.icon = DefaultIcon;
-    })();
-
   }, []);
 
   const memoizedImage = useMemo(() => (
     <Image src={imageSrc} alt={t('title')} fill objectFit="cover" />
   ), [imageSrc, t]);
-
-  const mapComponent = useMemo(() => {
-    if (!isClient || !position) return null;
-    return (
-        <MapContainer center={position} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-            <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <Marker position={position}>
-                <Popup>
-                   {t('popup_text')}
-                </Popup>
-            </Marker>
-        </MapContainer>
-    );
-  }, [isClient, position, t]);
 
   return (
     <motion.div
@@ -123,7 +122,7 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
             {t('location_title')}
         </h3>
         <div className="h-48 w-full rounded-md overflow-hidden bg-muted">
-            {mapComponent}
+            {isClient && position && <Map position={position} />}
             {isClient && error && <div className="h-full w-full flex items-center justify-center text-sm text-destructive">{t('location_error')}</div>}
             {isClient && !position && !error && (
                 <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
