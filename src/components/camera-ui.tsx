@@ -18,16 +18,9 @@ import { useLocale, useTranslations } from 'next-intl';
 import LanguageSwitcher from './language-switcher';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCameraStore } from '@/store/camera-store';
-import * as tf from '@tensorflow/tfjs';
-import '@tensorflow/tfjs-backend-webgl';
-import * as cocoSsd from '@tensorflow-models/coco-ssd';
-import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
+import { FaceMesh, FACEMESH_TESSELATION } from '@mediapipe/face_mesh';
+import { drawConnectors } from '@mediapipe/drawing_utils';
 
-
-type Prediction = cocoSsd.DetectedObject;
-
-// Initialize TensorFlow.js backend
-tf.setBackend('webgl').then(() => console.log('WebGL backend set successfully.'));
 
 export default function CameraUI() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -36,6 +29,7 @@ export default function CameraUI() {
   const recordedChunksRef = useRef<Blob[]>([]);
   const touchStartDistance = useRef<number>(0);
   const lastZoom = useRef<number>(1);
+  const faceMeshRef = useRef<FaceMesh | null>(null);
 
   const { toast } = useToast();
   const t = useTranslations('CameraUI');
@@ -70,50 +64,66 @@ export default function CameraUI() {
     setIsTorchOn,
     reset,
   } = useCameraStore();
-
-  const [objectModel, setObjectModel] = useState<cocoSsd.ObjectDetection | null>(null);
-  const [predictions, setPredictions] = useState<Prediction[]>([]);
+  
+  const [faceModelReady, setFaceModelReady] = useState(false);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const [faceModel, setFaceModel] = useState<faceLandmarksDetection.FaceLandmarksDetector | null>(null);
-  const [facePredictions, setFacePredictions] = useState<faceLandmarksDetection.Face[]>([]);
-  const faceDetectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
   const qrIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const [translatedText, setTranslatedText] = useState<{ text: string, box: any } | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [showStats, setShowStats] = useState(false);
 
-  const loadModels = useCallback(async () => {
-    try {
-      await tf.ready();
-      const loadedObjectModel = await cocoSsd.load();
-      setObjectModel(loadedObjectModel);
-    } catch (err) {
-      console.error("Failed to load object model", err);
-      toast({
-        variant: "destructive",
-        title: "AI Model Error",
-        description: "Could not load the object detection model.",
-      });
-    }
-  }, [toast]);
+  const loadFaceModel = useCallback(() => {
+    if (faceMeshRef.current) return;
+    setFaceModelReady(false);
+    const faceMesh = new FaceMesh({
+      locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+      },
+    });
+
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+    
+    faceMesh.onResults(onFaceResults);
+
+    faceMesh.initialize().then(() => {
+        faceMeshRef.current = faceMesh;
+        setFaceModelReady(true);
+    });
+
+  }, []);
   
-  const loadFaceModel = useCallback(async () => {
-    try {
-      await tf.ready();
-      const model = await faceLandmarksDetection.load(faceLandmarksDetection.SupportedPackages.mediapipeFacemesh);
-      setFaceModel(model);
-    } catch (err) {
-      console.error("Failed to load face model", err);
-      toast({
-        variant: "destructive",
-        title: "AI Model Error",
-        description: "Could not load the face detection model.",
-      });
+  const onFaceResults = (results: any) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !videoRef.current) return;
+
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (results.multiFaceLandmarks) {
+      for (const landmarks of results.multiFaceLandmarks) {
+        drawConnectors(ctx, landmarks, FACEMESH_TESSELATION,
+                       {color: '#C0C0C070', lineWidth: 1});
+      }
     }
-  }, [toast]);
+    ctx.restore();
+  };
+  
+  const detectFace = useCallback(async () => {
+    if (faceMeshRef.current && videoRef.current) {
+        await faceMeshRef.current.send({image: videoRef.current});
+    }
+  }, []);
 
   const startCamera = useCallback(async () => {
     setIsCameraReady(false);
@@ -169,20 +179,18 @@ export default function CameraUI() {
     }
   }, [facingMode, setIsCameraReady, setVideoTrack, setZoom, setZoomCapabilities, t, toast, setFacingMode, setHasTorch, setIsTorchOn]);
 
-  const stopArMode = useCallback(() => {
+  const stopDetectionMode = useCallback(() => {
     if (detectionIntervalRef.current) {
       clearInterval(detectionIntervalRef.current);
       detectionIntervalRef.current = null;
     }
-    setPredictions([]);
-  }, []);
-
-  const stopFaceMode = useCallback(() => {
-    if (faceDetectionIntervalRef.current) {
-      clearInterval(faceDetectionIntervalRef.current);
-      faceDetectionIntervalRef.current = null;
+    const canvas = canvasRef.current;
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
     }
-    setFacePredictions([]);
   }, []);
 
   const stopQrMode = useCallback(() => {
@@ -224,48 +232,32 @@ export default function CameraUI() {
     }
   }, [isCameraReady, qrCode, stopQrMode, scanQrCode]);
 
-  const detectObjects = useCallback(async () => {
-    if (objectModel && videoRef.current && videoRef.current.readyState === 4) {
-      const detectedObjects = await objectModel.detect(videoRef.current);
-      setPredictions(detectedObjects);
-    }
-  }, [objectModel]);
-
-  const detectFaceLandmarks = useCallback(async () => {
-    if (faceModel && videoRef.current && videoRef.current.readyState === 4) {
-        const predictions = await faceModel.estimateFaces({
-            input: videoRef.current
-        });
-        setFacePredictions(predictions);
-    }
-  }, [faceModel]);
-
   useEffect(() => {
-    loadModels();
     loadFaceModel();
-  }, [loadModels, loadFaceModel]);
+
+    return () => {
+        faceMeshRef.current?.close();
+    }
+  }, [loadFaceModel]);
+
 
   useEffect(() => {
-    stopArMode();
+    stopDetectionMode();
     stopQrMode();
     stopTextMode();
-    stopFaceMode();
-
-    if (mode === 'AR' && isCameraReady && objectModel) {
-      detectionIntervalRef.current = setInterval(detectObjects, 100);
+    
+    if (mode === 'SMILE' && isCameraReady && faceModelReady) {
+      detectionIntervalRef.current = setInterval(detectFace, 100);
     } else if (mode === 'QR' && isCameraReady) {
       startQrMode();
-    } else if (mode === 'SMILE' && isCameraReady && faceModel) {
-      faceDetectionIntervalRef.current = setInterval(detectFaceLandmarks, 50);
     }
     
     return () => {
-      stopArMode();
+      stopDetectionMode();
       stopQrMode();
       stopTextMode();
-      stopFaceMode();
     }
-  }, [mode, isCameraReady, objectModel, faceModel, detectObjects, detectFaceLandmarks, stopArMode, stopQrMode, startQrMode, stopTextMode, stopFaceMode]);
+  }, [mode, isCameraReady, faceModelReady, detectFace, stopDetectionMode, stopQrMode, startQrMode, stopTextMode]);
 
 
   useEffect(() => {
@@ -274,10 +266,9 @@ export default function CameraUI() {
       if (videoRef.current && videoRef.current.srcObject) {
         (videoRef.current.srcObject as MediaStream).getTracks().forEach(track => track.stop());
       }
-      stopArMode();
+      stopDetectionMode();
       stopQrMode();
       stopTextMode();
-      stopFaceMode();
       reset();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -337,9 +328,8 @@ export default function CameraUI() {
   }, [videoTrack, hasTorch, isTorchOn, setIsTorchOn]);
 
   const handleFlipCamera = () => {
-    stopArMode();
+    stopDetectionMode();
     stopQrMode();
-    stopFaceMode();
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
@@ -421,14 +411,8 @@ export default function CameraUI() {
         const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
         
         if (mode === 'AR') {
-            const mostRelevantPrediction = predictions
-              .filter(p => p.class !== 'person')
-              .sort((a, b) => b.score - a.score)[0];
-  
-            const objectName = mostRelevantPrediction ? mostRelevantPrediction.class : 'Object not identified';
-
+            const objectName = 'placeholder'
             setArSnapshot({ image: dataUrl, label: t('ar_processing'), description: '' });
-
             identifyObject(objectName).then(result => {
                 setArSnapshot({
                     image: dataUrl,
@@ -459,10 +443,8 @@ export default function CameraUI() {
   };
   
   const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR' | 'TEXT' | 'SMILE') => {
-    setPredictions([]);
     setQrCode(null);
     setTranslatedText(null);
-    setFacePredictions([]);
     if(isRecording) stopRecording();
     setMode(newMode);
   }
@@ -470,7 +452,7 @@ export default function CameraUI() {
   const ShutterButton = () => (
     <motion.button
       onClick={handleCapture}
-      disabled={!isCameraReady || mode === 'QR' || (mode === 'AR' && !objectModel) || (mode === 'TEXT' && isTranslating) || (mode === 'SMILE')}
+      disabled={!isCameraReady || mode === 'QR' || (mode === 'TEXT' && isTranslating) || (mode === 'SMILE')}
       className="w-16 h-16 rounded-full bg-white/30 p-1 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       aria-label={t('capture_button_label')}
       whileTap={{ scale: 0.9 }}
@@ -534,77 +516,7 @@ export default function CameraUI() {
   );
 
   const ArObjectBoxes = () => {
-    if (!videoRef.current) return null;
-    const { videoWidth, videoHeight } = videoRef.current;
-    const { offsetWidth, offsetHeight } = videoRef.current;
-    const scaleX = offsetWidth / videoWidth;
-    const scaleY = offsetHeight / videoHeight;
-
-    return predictions.map((prediction, index) => {
-        const [x, y, width, height] = prediction.bbox;
-        const isPerson = prediction.class === 'person';
-        const borderColor = isPerson ? 'border-red-500' : 'border-accent';
-
-        return (
-            <div
-                key={index}
-                className={cn('absolute border-2', borderColor)}
-                style={{
-                    left: `${x * scaleX}px`,
-                    top: `${y * scaleY}px`,
-                    width: `${width * scaleX}px`,
-                    height: `${height * scaleY}px`,
-                }}
-            >
-                <p className={cn('absolute -top-6 left-0 text-sm font-semibold px-1 rounded', isPerson ? 'bg-red-500 text-white' : 'bg-accent text-accent-foreground')}>
-                    {prediction.class} ({(prediction.score * 100).toFixed(1)}%)
-                </p>
-            </div>
-        );
-    });
-  };
-
-  const FaceLandmarksCanvas = () => {
-    const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
-
-    useEffect(() => {
-        const video = videoRef.current;
-        const canvas = overlayCanvasRef.current;
-        if (!video || !canvas || facePredictions.length === 0) return;
-
-        const { videoWidth, videoHeight } = video;
-        const { offsetWidth, offsetHeight } = video;
-        canvas.width = offsetWidth;
-        canvas.height = offsetHeight;
-        
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        const scaleX = offsetWidth / videoWidth;
-        const scaleY = offsetHeight / videoHeight;
-
-        facePredictions.forEach(prediction => {
-            const keypoints = prediction.keypoints;
-            
-            ctx.fillStyle = 'hsl(var(--accent))';
-
-            for (let i = 0; i < keypoints.length; i++) {
-                const x = keypoints[i].x * scaleX;
-                const y = keypoints[i].y * scaleY;
-
-                ctx.beginPath();
-                ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
-                ctx.fill();
-            }
-        });
-
-    }, [facePredictions]);
-
-    if (mode !== 'SMILE') return null;
-
-    return <canvas ref={overlayCanvasRef} className="absolute inset-0 pointer-events-none" />;
+    return null;
   };
 
 const TranslatedTextBox = ({ translated }: { translated: { text: string, box: any } | null }) => {
@@ -648,21 +560,20 @@ const TranslatedTextBox = ({ translated }: { translated: { text: string, box: an
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         />
-        <canvas ref={canvasRef} className="hidden" />
-        <FaceLandmarksCanvas />
+        <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none" />
 
-        {(!isCameraReady || (mode === 'AR' && !objectModel) || (mode === 'SMILE' && !faceModel)) && (
+        {(!isCameraReady || (mode === 'SMILE' && !faceModelReady)) && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-white" />
               <p className="text-white text-sm font-medium">
-                {mode === 'AR' && !objectModel ? 'Nahrávám AI modely...' : mode === 'SMILE' && !faceModel ? 'Nahrávám model obličeje...' : 'Nahrávám kameru...'}
+                {mode === 'SMILE' && !faceModelReady ? 'Nahrávám model obličeje...' : 'Nahrávám kameru...'}
               </p>
             </div>
           </div>
         )}
         
-        {mode === 'AR' && isCameraReady && objectModel && <ArObjectBoxes />}
+        {mode === 'AR' && isCameraReady && <ArObjectBoxes />}
         {mode === 'TEXT' && translatedText && <TranslatedTextBox translated={translatedText} />}
 
         <AnimatePresence>
