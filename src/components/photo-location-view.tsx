@@ -6,12 +6,6 @@ import { Button } from './ui/button';
 import { X, Loader2, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import dynamic from 'next/dynamic';
-import 'leaflet/dist/leaflet.css';
-
-import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
-import iconUrl from 'leaflet/dist/images/marker-icon.png';
-import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
 interface PhotoLocationViewProps {
   imageSrc: string;
@@ -23,55 +17,12 @@ type Position = {
   lng: number;
 };
 
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
-const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
-
-function Map({ position }: { position: Position }) {
-    const t = useTranslations('PhotoLocationView');
-
-    useEffect(() => {
-        (async () => {
-            const L = (await import('leaflet')).default;
-            const DefaultIcon = L.icon({
-                iconRetinaUrl: iconRetinaUrl.src,
-                iconUrl: iconUrl.src,
-                shadowUrl: shadowUrl.src,
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                tooltipAnchor: [16, -28],
-                shadowSize: [41, 41],
-            });
-            L.Marker.prototype.options.icon = DefaultIcon;
-        })();
-    }, []);
-
-    return (
-        <MapContainer center={position} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-            <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <Marker position={position}>
-                <Popup>
-                   {t('popup_text')}
-                </Popup>
-            </Marker>
-        </MapContainer>
-    );
-}
-
-
 export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationViewProps) {
   const t = useTranslations('PhotoLocationView');
   const [position, setPosition] = useState<Position | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsClient(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -87,6 +38,13 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
   const memoizedImage = useMemo(() => (
     <Image src={imageSrc} alt={t('title')} fill objectFit="cover" />
   ), [imageSrc, t]);
+
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  const mapUrl = useMemo(() => {
+    if (!position || !mapboxToken) return null;
+    const { lng, lat } = position;
+    return `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/pin-s+f74c4c(${lng},${lat})/${lng},${lat},13,0/400x300@2x?access_token=${mapboxToken}`;
+  }, [position, mapboxToken]);
 
   return (
     <motion.div
@@ -122,12 +80,20 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
             {t('location_title')}
         </h3>
         <div className="h-48 w-full rounded-md overflow-hidden bg-muted">
-            {isClient && position && <Map position={position} />}
-            {isClient && error && <div className="h-full w-full flex items-center justify-center text-sm text-destructive">{t('location_error')}</div>}
-            {isClient && !position && !error && (
+            {mapUrl ? (
+                <a href={`https://www.google.com/maps/search/?api=1&query=${position?.lat},${position?.lng}`} target="_blank" rel="noopener noreferrer">
+                    <Image src={mapUrl} alt="Map of photo location" fill objectFit="cover" />
+                </a>
+            ) : (
                 <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t('loading_location')}
+                    {error ? (
+                        <span className="text-destructive">{t('location_error')}</span>
+                    ) : (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {t('loading_location')}
+                        </>
+                    )}
                 </div>
             )}
         </div>

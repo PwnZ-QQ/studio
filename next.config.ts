@@ -30,22 +30,10 @@ const nextConfig = {
             },
             {
                 protocol: 'https',
-                hostname: 'a.tile.openstreetmap.org',
+                hostname: 'api.mapbox.com',
                 port: '',
                 pathname: '/**',
-            },
-            {
-                protocol: 'https',
-                hostname: 'b.tile.openstreetmap.org',
-                port: '',
-                pathname: '/**',
-            },
-            {
-                protocol: 'https',
-                hostname: 'c.tile.openstreetmap.org',
-                port: '',
-                pathname: '/**',
-            },
+            }
         ],
     },
 };
