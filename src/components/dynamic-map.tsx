@@ -42,13 +42,15 @@ export default function DynamicMap() {
     );
   }, []);
 
-  if (!isClient) {
-    return (
-      <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
+  const MapPlaceholder = () => (
+    <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
         {t('loading_location')}
-      </div>
-    );
+    </div>
+  );
+
+  if (!isClient) {
+    return <MapPlaceholder />;
   }
 
   if (error) {
@@ -60,17 +62,18 @@ export default function DynamicMap() {
   }
 
   if (!position) {
-     return (
-      <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        {t('loading_location')}
-      </div>
-    );
+     return <MapPlaceholder />;
   }
   
   return (
-      <a href={`https://www.google.com/maps/search/?api=1&query=${position?.latitude},${position?.longitude}`} target="_blank" rel="noopener noreferrer" className="h-full w-full block">
-        <MapContainer center={[position.latitude, position.longitude]} zoom={14} style={{ height: '100%', width: '100%' }} scrollWheelZoom={false}>
+    <MapContainer 
+        center={[position.latitude, position.longitude]} 
+        zoom={14} 
+        style={{ height: '100%', width: '100%' }} 
+        scrollWheelZoom={false}
+        placeholder={<MapPlaceholder />}
+    >
+        <a href={`https://www.google.com/maps/search/?api=1&query=${position?.latitude},${position?.longitude}`} target="_blank" rel="noopener noreferrer" className="h-full w-full block">
             <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -78,7 +81,7 @@ export default function DynamicMap() {
             <Marker position={[position.latitude, position.longitude]} icon={icon}>
               <Popup>{t('popup_text')}</Popup>
             </Marker>
-        </MapContainer>
-      </a>
+        </a>
+    </MapContainer>
   );
 }
