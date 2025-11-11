@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react';
 import Image from 'next/image';
-import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download, Zap, ZapOff, Type } from 'lucide-react';
+import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download, Zap, ZapOff, Type, Smile } from 'lucide-react';
 import PhotoLocationView from './photo-location-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -237,6 +237,10 @@ export default function CameraUI() {
   }, [objectModel]);
 
   useEffect(() => {
+    loadModels();
+  }, [loadModels]);
+
+  useEffect(() => {
     stopArMode();
     stopQrMode();
     stopTextMode();
@@ -248,17 +252,14 @@ export default function CameraUI() {
     } else if (mode === 'TEXT' && isCameraReady && textDetector) {
       textDetectionIntervalRef.current = setInterval(detectText, 1000);
     }
+    
     return () => {
       stopArMode();
       stopQrMode();
       stopTextMode();
     }
-  }, [mode, isCameraReady, objectModel, detectObjects, stopArMode, stopQrMode, startQrMode, textDetector, detectText, stopTextMode, facingMode, toast]);
+  }, [mode, isCameraReady, objectModel, detectObjects, stopArMode, stopQrMode, startQrMode, textDetector, detectText, stopTextMode]);
 
-
-  useEffect(() => {
-    loadModels();
-  }, [loadModels]);
 
   useEffect(() => {
     startCamera();
