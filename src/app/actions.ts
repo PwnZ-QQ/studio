@@ -1,13 +1,10 @@
 'use server';
 
 import { realTimeTextTranslation } from '@/ai/flows/real-time-text-translation';
-import { objectIdentification } from '@/ai/flows/object-identification';
-import { describeObject } from '@/ai/flows/describe-object-flow';
 import { getArObjectDetails } from '@/ai/flows/get-ar-object-details';
 import { textToSpeech } from '@/ai/flows/text-to-speech';
 import { z } from 'zod';
-import {NextRequest} from 'next/server';
-import {headers} from 'next/headers';
+import { headers } from 'next/headers';
 
 const translationFormSchema = z.object({
   photoDataUri: z.string().min(1, { message: 'Image data is required.' }),
@@ -52,48 +49,28 @@ export async function getTranslation(prevState: TranslationState, formData: Form
 }
 
 const objectIdFormSchema = z.object({
-  photoDataUri: z.string().min(1, { message: 'Image data is required.' }),
+  objectName: z.string().min(1, { message: 'Object name is required.' }),
 });
 
-export async function identifyObject(photoDataUri: string, objectNameFromClient?: string) {
+export async function identifyObject(objectName: string) {
     const headersList = headers();
     const referer = headersList.get('referer');
     const locale = referer?.split('/')[3] || 'cs';
     const targetLanguage = locale === 'cs' ? 'Czech' : 'English';
 
-    let objectNameToDescribe = objectNameFromClient;
-
-    if (!objectNameToDescribe) {
-        const validatedFields = objectIdFormSchema.safeParse({ photoDataUri });
-        if (!validatedFields.success) {
-            return { error: 'Invalid data' };
-        }
-        try {
-            const identificationResult = await objectIdentification({ photoDataUri, targetLanguage });
-            objectNameToDescribe = identificationResult.identifiedObject;
-        } catch (error) {
-            console.error('Object identification from image failed', error);
-            // We can still proceed without a name, description will also fail, but the snapshot view will be shown
-        }
-    }
-
-    if (!objectNameToDescribe) {
-        return { 
-            identifiedObject: 'Object not identified', 
-            description: 'Could not identify an object in the snapshot.', 
-        };
+    const validatedFields = objectIdFormSchema.safeParse({ objectName });
+    if (!validatedFields.success) {
+        return { error: 'Invalid data' };
     }
 
     try {
-        const descriptionResult = await describeObject({ objectName: objectNameToDescribe, targetLanguage });
+        const result = await getArObjectDetails({ objectName, targetLanguage });
         return {
-            identifiedObject: objectNameToDescribe,
-            description: descriptionResult.description,
+            description: result.description,
         };
     } catch (error) {
-        console.error('Object description failed', error);
+        console.error('AR object details failed', error);
         return { 
-            identifiedObject: objectNameToDescribe, 
             description: 'Could not get a description for this object.',
             error: 'AI object description failed.' 
         };

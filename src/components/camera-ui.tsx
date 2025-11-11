@@ -295,25 +295,21 @@ export default function CameraUI() {
         const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
         
         if (mode === 'AR') {
-          const mostLikelyObject = predictions.length > 0 ? predictions.reduce((prev, current) => (prev.score > current.score) ? prev : current) : null;
-          
-          setArSnapshot({ image: dataUrl, label: mostLikelyObject ? mostLikelyObject.class : t('ar_processing'), description: '' });
+            const mostRelevantPrediction = predictions
+              .filter(p => p.class !== 'person')
+              .sort((a, b) => b.score - a.score)[0];
+  
+            const objectName = mostRelevantPrediction ? mostRelevantPrediction.class : 'object';
 
-          identifyObject(dataUrl, mostLikelyObject?.class).then(result => {
-              if (result.identifiedObject) {
-                  setArSnapshot({
-                      image: dataUrl,
-                      label: result.identifiedObject,
-                      description: result.description || (result.error ? result.error as string : 'Could not get a description.')
-                  });
-              } else {
-                  setArSnapshot({
-                      image: dataUrl,
-                      label: 'Object not identified',
-                      description: 'Could not identify an object in the snapshot.'
-                  });
-              }
-          });
+            setArSnapshot({ image: dataUrl, label: objectName, description: '' });
+
+            identifyObject(objectName).then(result => {
+                setArSnapshot({
+                    image: dataUrl,
+                    label: objectName,
+                    description: result.description || (result.error ? result.error as string : 'Could not get a description.')
+                });
+            });
       } else {
           setCapturedImage(dataUrl);
       }

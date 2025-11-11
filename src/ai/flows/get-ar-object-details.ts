@@ -1,9 +1,9 @@
 'use server';
 
 /**
- * @fileOverview An AI agent that identifies an object and provides a description.
+ * @fileOverview An AI agent that provides a description for a given object.
  *
- * - getArObjectDetails - A function that handles the object identification and description process.
+ * - getArObjectDetails - A function that handles the object description process.
  * - ArObjectDetailsInput - The input type for the getArObjectDetails function.
  * - ArObjectDetailsOutput - The return type for the getArObjectDetails function.
  */
@@ -13,17 +13,12 @@ import {z} from 'genkit';
 import { googleAI } from '@genkit-ai/google-genai';
 
 const ArObjectDetailsInputSchema = z.object({
-  photoDataUri: z
-    .string()
-    .describe(
-      "A photo of an object to identify, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
-    targetLanguage: z.string().default('Czech').describe('The language for the object name and description.'),
+  objectName: z.string().describe('The name of the object to describe.'),
+  targetLanguage: z.string().default('Czech').describe('The language for the object description.'),
 });
 export type ArObjectDetailsInput = z.infer<typeof ArObjectDetailsInputSchema>;
 
 const ArObjectDetailsOutputSchema = z.object({
-  objectName: z.string().describe('The name of the identified object.'),
   description: z.string().describe('A short, one-paragraph description of the object.'),
 });
 export type ArObjectDetailsOutput = z.infer<typeof ArObjectDetailsOutputSchema>;
@@ -36,15 +31,14 @@ const prompt = ai.definePrompt({
   name: 'getArObjectDetailsPrompt',
   input: {schema: ArObjectDetailsInputSchema},
   output: {schema: ArObjectDetailsOutputSchema},
-  prompt: `You are an object identification AI. You will be given an image of an object.
-1. Identify the main object in the image.
-2. Provide a short, one-paragraph description of that object. Use Google Search to find interesting and relevant facts to include in the description.
-3. Translate both the object name and the description into the specified language.
+  prompt: `You are an object description AI. You will be given the name of an object.
+1. Provide a short, one-paragraph description of that object. Use Google Search to find interesting and relevant facts to include in the description.
+2. Translate the description into the specified language.
 
-Image: {{media url=photoDataUri}}
+Object Name: {{{objectName}}}
 Target Language: {{{targetLanguage}}}
 `,
-  tools: [googleAI.googleSearchTool()],
+  tools: [googleAI.googleSearchTool],
 });
 
 const getArObjectDetailsFlow = ai.defineFlow(
