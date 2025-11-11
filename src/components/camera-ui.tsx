@@ -18,8 +18,8 @@ import { useLocale, useTranslations } from 'next-intl';
 import LanguageSwitcher from './language-switcher';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCameraStore } from '@/store/camera-store';
-import { FaceMesh, FACEMESH_TESSELATION } from '@mediapipe/face_mesh';
-import { drawConnectors } from '@mediapipe/drawing_utils';
+import { FaceMesh } from '@mediapipe/face_mesh';
+import { drawConnectors, FACEMESH_TESSELATION } from '@mediapipe/drawing_utils';
 
 
 export default function CameraUI() {
