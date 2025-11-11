@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import { ScrollArea } from './ui/scroll-area';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import ObjectModel from './object-model';
+import Image from 'next/image';
 
 interface ArSnapshotViewProps {
   imageSrc: string;
@@ -45,9 +45,7 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
         className="w-full max-w-sm"
       >
         <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black">
-          <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-white"/></div>}>
-            <ObjectModel modelKey={label} />
-          </Suspense>
+           <Image src={imageSrc} alt={label} layout="fill" objectFit="contain" />
         </div>
       </motion.div>
 
