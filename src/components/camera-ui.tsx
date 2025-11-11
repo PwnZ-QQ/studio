@@ -22,6 +22,9 @@ import * as cocoSsd from '@tensorflow-models/coco-ssd';
 
 type Prediction = cocoSsd.DetectedObject;
 
+// Initialize TensorFlow.js backend
+tf.setBackend('webgl').then(() => console.log('WebGL backend set successfully.'));
+
 export default function CameraUI() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -69,7 +72,6 @@ export default function CameraUI() {
 
   const loadModel = useCallback(async () => {
     try {
-      await tf.setBackend('webgl');
       await tf.ready();
       const loadedModel = await cocoSsd.load();
       setModel(loadedModel);
@@ -299,9 +301,9 @@ export default function CameraUI() {
               .filter(p => p.class !== 'person')
               .sort((a, b) => b.score - a.score)[0];
   
-            const objectName = mostRelevantPrediction ? mostRelevantPrediction.class : 'object';
+            const objectName = mostRelevantPrediction ? mostRelevantPrediction.class : 'Object not identified';
 
-            setArSnapshot({ image: dataUrl, label: objectName, description: '' });
+            setArSnapshot({ image: dataUrl, label: t('ar_processing'), description: '' });
 
             identifyObject(objectName).then(result => {
                 setArSnapshot({
