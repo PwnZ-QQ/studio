@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 
-type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR' | 'TEXT';
+type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR' | 'TEXT' | 'SMILE';
 
 interface ArObject {
   label: string;
@@ -80,3 +80,5 @@ export const useCameraStore = create<CameraState>((set) => ({
   setIsTorchOn: (isTorchOn) => set({ isTorchOn }),
   reset: () => set(initialState),
 }));
+
+    

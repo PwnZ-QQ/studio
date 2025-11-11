@@ -21,6 +21,8 @@ import { useCameraStore } from '@/store/camera-store';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
+import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
+
 
 type Prediction = cocoSsd.DetectedObject;
 
@@ -73,6 +75,10 @@ export default function CameraUI() {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [faceModel, setFaceModel] = useState<faceLandmarksDetection.FaceLandmarksDetector | null>(null);
+  const [facePredictions, setFacePredictions] = useState<faceLandmarksDetection.Face[]>([]);
+  const faceDetectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const qrIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   const [translatedText, setTranslatedText] = useState<{ text: string, box: any } | null>(null);
@@ -85,11 +91,26 @@ export default function CameraUI() {
       const loadedObjectModel = await cocoSsd.load();
       setObjectModel(loadedObjectModel);
     } catch (err) {
-      console.error("Failed to load models", err);
+      console.error("Failed to load object model", err);
       toast({
         variant: "destructive",
         title: "AI Model Error",
-        description: "Could not load the AI models.",
+        description: "Could not load the object detection model.",
+      });
+    }
+  }, [toast]);
+  
+  const loadFaceModel = useCallback(async () => {
+    try {
+      await tf.ready();
+      const model = await faceLandmarksDetection.load(faceLandmarksDetection.SupportedPackages.mediapipeFacemesh);
+      setFaceModel(model);
+    } catch (err) {
+      console.error("Failed to load face model", err);
+      toast({
+        variant: "destructive",
+        title: "AI Model Error",
+        description: "Could not load the face detection model.",
       });
     }
   }, [toast]);
@@ -156,6 +177,14 @@ export default function CameraUI() {
     setPredictions([]);
   }, []);
 
+  const stopFaceMode = useCallback(() => {
+    if (faceDetectionIntervalRef.current) {
+      clearInterval(faceDetectionIntervalRef.current);
+      faceDetectionIntervalRef.current = null;
+    }
+    setFacePredictions([]);
+  }, []);
+
   const stopQrMode = useCallback(() => {
     if (qrIntervalRef.current) {
       clearInterval(qrIntervalRef.current);
@@ -202,27 +231,41 @@ export default function CameraUI() {
     }
   }, [objectModel]);
 
+  const detectFaceLandmarks = useCallback(async () => {
+    if (faceModel && videoRef.current && videoRef.current.readyState === 4) {
+        const predictions = await faceModel.estimateFaces({
+            input: videoRef.current
+        });
+        setFacePredictions(predictions);
+    }
+  }, [faceModel]);
+
   useEffect(() => {
     loadModels();
-  }, [loadModels]);
+    loadFaceModel();
+  }, [loadModels, loadFaceModel]);
 
   useEffect(() => {
     stopArMode();
     stopQrMode();
     stopTextMode();
+    stopFaceMode();
 
     if (mode === 'AR' && isCameraReady && objectModel) {
       detectionIntervalRef.current = setInterval(detectObjects, 100);
     } else if (mode === 'QR' && isCameraReady) {
       startQrMode();
+    } else if (mode === 'SMILE' && isCameraReady && faceModel) {
+      faceDetectionIntervalRef.current = setInterval(detectFaceLandmarks, 50);
     }
     
     return () => {
       stopArMode();
       stopQrMode();
       stopTextMode();
+      stopFaceMode();
     }
-  }, [mode, isCameraReady, objectModel, detectObjects, stopArMode, stopQrMode, startQrMode, stopTextMode]);
+  }, [mode, isCameraReady, objectModel, faceModel, detectObjects, detectFaceLandmarks, stopArMode, stopQrMode, startQrMode, stopTextMode, stopFaceMode]);
 
 
   useEffect(() => {
@@ -234,6 +277,7 @@ export default function CameraUI() {
       stopArMode();
       stopQrMode();
       stopTextMode();
+      stopFaceMode();
       reset();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -295,6 +339,7 @@ export default function CameraUI() {
   const handleFlipCamera = () => {
     stopArMode();
     stopQrMode();
+    stopFaceMode();
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
@@ -413,10 +458,11 @@ export default function CameraUI() {
     startQrMode();
   };
   
-  const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR' | 'TEXT') => {
+  const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR' | 'TEXT' | 'SMILE') => {
     setPredictions([]);
     setQrCode(null);
     setTranslatedText(null);
+    setFacePredictions([]);
     if(isRecording) stopRecording();
     setMode(newMode);
   }
@@ -424,7 +470,7 @@ export default function CameraUI() {
   const ShutterButton = () => (
     <motion.button
       onClick={handleCapture}
-      disabled={!isCameraReady || mode === 'QR' || (mode === 'AR' && !objectModel) || (mode === 'TEXT' && isTranslating) }
+      disabled={!isCameraReady || mode === 'QR' || (mode === 'AR' && !objectModel) || (mode === 'TEXT' && isTranslating) || (mode === 'SMILE')}
       className="w-16 h-16 rounded-full bg-white/30 p-1 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       aria-label={t('capture_button_label')}
       whileTap={{ scale: 0.9 }}
@@ -433,6 +479,7 @@ export default function CameraUI() {
         className={cn("w-full h-full rounded-full",
           mode === 'VIDEO' ? 'bg-red-500' : 'bg-white',
           mode === 'TEXT' && 'bg-blue-500',
+          mode === 'SMILE' && 'bg-yellow-400',
         )}
         animate={{ 
           scale: isRecording ? 0.6 : 1,
@@ -441,6 +488,7 @@ export default function CameraUI() {
         transition={{ duration: 0.2 }}
       >
         {mode === 'TEXT' && (isTranslating ? <Loader2 className="h-full w-full p-3 text-white animate-spin" /> : <Type className="h-full w-full p-4 text-blue-900" />)}
+        {mode === 'SMILE' && <Smile className="h-full w-full p-3 text-yellow-900" />}
       </motion.div>
     </motion.button>
   );
@@ -455,6 +503,9 @@ export default function CameraUI() {
       </button>
       <button onClick={() => handleModeChange('TEXT')} className={cn("transition-colors flex items-center gap-1", mode === 'TEXT' && 'text-accent font-semibold')}>
         <Type className="h-4 w-4" /> Text
+      </button>
+      <button onClick={() => handleModeChange('SMILE')} className={cn("transition-colors flex items-center gap-1", mode === 'SMILE' && 'text-accent font-semibold')}>
+        <Smile className="h-4 w-4" /> Úsměv
       </button>
     </div>
   );
@@ -511,7 +562,50 @@ export default function CameraUI() {
             </div>
         );
     });
-};
+  };
+
+  const FaceLandmarksCanvas = () => {
+    const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        const canvas = overlayCanvasRef.current;
+        if (!video || !canvas || facePredictions.length === 0) return;
+
+        const { videoWidth, videoHeight } = video;
+        const { offsetWidth, offsetHeight } = video;
+        canvas.width = offsetWidth;
+        canvas.height = offsetHeight;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const scaleX = offsetWidth / videoWidth;
+        const scaleY = offsetHeight / videoHeight;
+
+        facePredictions.forEach(prediction => {
+            const keypoints = prediction.keypoints;
+            
+            ctx.fillStyle = 'hsl(var(--accent))';
+
+            for (let i = 0; i < keypoints.length; i++) {
+                const x = keypoints[i].x * scaleX;
+                const y = keypoints[i].y * scaleY;
+
+                ctx.beginPath();
+                ctx.arc(x, y, 1.5, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        });
+
+    }, [facePredictions]);
+
+    if (mode !== 'SMILE') return null;
+
+    return <canvas ref={overlayCanvasRef} className="absolute inset-0 pointer-events-none" />;
+  };
 
 const TranslatedTextBox = ({ translated }: { translated: { text: string, box: any } | null }) => {
   if (!translated || !videoRef.current) return null;
@@ -555,13 +649,14 @@ const TranslatedTextBox = ({ translated }: { translated: { text: string, box: an
           onTouchEnd={handleTouchEnd}
         />
         <canvas ref={canvasRef} className="hidden" />
+        <FaceLandmarksCanvas />
 
-        {(!isCameraReady || (mode === 'AR' && !objectModel)) && (
+        {(!isCameraReady || (mode === 'AR' && !objectModel) || (mode === 'SMILE' && !faceModel)) && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-white" />
               <p className="text-white text-sm font-medium">
-                {mode === 'AR' && !objectModel ? 'Nahrávám AI modely...' : 'Nahrávám kameru...'}
+                {mode === 'AR' && !objectModel ? 'Nahrávám AI modely...' : mode === 'SMILE' && !faceModel ? 'Nahrávám model obličeje...' : 'Nahrávám kameru...'}
               </p>
             </div>
           </div>
@@ -671,3 +766,5 @@ const TranslatedTextBox = ({ translated }: { translated: { text: string, box: an
     </div>
   );
 }
+
+    
