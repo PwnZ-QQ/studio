@@ -19,6 +19,7 @@ import { useCameraStore } from '@/store/camera-store';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
+import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
 
 type Prediction = cocoSsd.DetectedObject;
 
@@ -64,23 +65,28 @@ export default function CameraUI() {
     reset,
   } = useCameraStore();
 
-  const [model, setModel] = useState<cocoSsd.ObjectDetection | null>(null);
+  const [objectModel, setObjectModel] = useState<cocoSsd.ObjectDetection | null>(null);
+  const [faceModel, setFaceModel] = useState<faceLandmarksDetection.FaceLandmarksDetector | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const qrIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const loadModel = useCallback(async () => {
+  const loadModels = useCallback(async () => {
     try {
       await tf.ready();
-      const loadedModel = await cocoSsd.load();
-      setModel(loadedModel);
+      const [loadedObjectModel, loadedFaceModel] = await Promise.all([
+        cocoSsd.load(),
+        faceLandmarksDetection.load(faceLandmarksDetection.SupportedPackages.mediapipeFacemesh)
+      ]);
+      setObjectModel(loadedObjectModel);
+      setFaceModel(loadedFaceModel);
     } catch (err) {
-      console.error("Failed to load model", err);
+      console.error("Failed to load models", err);
       toast({
         variant: "destructive",
         title: "AI Model Error",
-        description: "Could not load the object detection model.",
+        description: "Could not load the AI models.",
       });
     }
   }, [toast]);
@@ -182,8 +188,8 @@ export default function CameraUI() {
   }, [isCameraReady, qrCode, stopQrMode, scanQrCode]);
 
   useEffect(() => {
-    loadModel();
-  }, [loadModel]);
+    loadModels();
+  }, [loadModels]);
 
   useEffect(() => {
     startCamera();
@@ -199,16 +205,21 @@ export default function CameraUI() {
   }, [facingMode]);
   
   const detectObjects = useCallback(async () => {
-    if (model && videoRef.current && videoRef.current.readyState === 4) {
-      const detectedObjects = await model.detect(videoRef.current);
+    if (objectModel && videoRef.current && videoRef.current.readyState === 4) {
+      const detectedObjects = await objectModel.detect(videoRef.current);
       setPredictions(detectedObjects);
+
+      if (faceModel) {
+        const faces = await faceModel.estimateFaces({input: videoRef.current});
+        // TODO: Visualize face predictions
+      }
     }
-  }, [model]);
+  }, [objectModel, faceModel]);
 
   useEffect(() => {
     stopArMode();
     stopQrMode();
-    if (mode === 'AR' && isCameraReady && model) {
+    if (mode === 'AR' && isCameraReady && objectModel && faceModel) {
       detectionIntervalRef.current = setInterval(detectObjects, 100);
     } else if (mode === 'QR' && isCameraReady) {
       startQrMode();
@@ -217,7 +228,7 @@ export default function CameraUI() {
       stopArMode();
       stopQrMode();
     }
-  }, [mode, isCameraReady, model, detectObjects, stopArMode, stopQrMode, startQrMode]);
+  }, [mode, isCameraReady, objectModel, faceModel, detectObjects, stopArMode, stopQrMode, startQrMode]);
 
   const handleZoomChange = (newZoom: number) => {
     if (videoTrack && zoomCapabilities) {
@@ -345,7 +356,7 @@ export default function CameraUI() {
   const ShutterButton = () => (
     <motion.button
       onClick={handleCapture}
-      disabled={!isCameraReady || mode === 'QR' || (mode === 'AR' && !model)}
+      disabled={!isCameraReady || mode === 'QR' || (mode === 'AR' && !objectModel)}
       className="w-16 h-16 rounded-full bg-white/30 p-1 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       aria-label={t('capture_button_label')}
       whileTap={{ scale: 0.9 }}
@@ -434,18 +445,18 @@ export default function CameraUI() {
         <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
         <canvas ref={canvasRef} className="hidden" />
 
-        {(!isCameraReady || (mode === 'AR' && !model)) && (
+        {(!isCameraReady || (mode === 'AR' && (!objectModel || !faceModel))) && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-white" />
               <p className="text-white text-sm font-medium">
-                {mode === 'AR' && !model ? 'Nahrávám AI model...' : 'Nahrávám kameru...'}
+                {mode === 'AR' && (!objectModel || !faceModel) ? 'Nahrávám AI modely...' : 'Nahrávám kameru...'}
               </p>
             </div>
           </div>
         )}
         
-        {mode === 'AR' && isCameraReady && model && <ArObjectBoxes />}
+        {mode === 'AR' && isCameraReady && objectModel && <ArObjectBoxes />}
 
         <AnimatePresence>
         {mode === 'QR' && qrCode && (
