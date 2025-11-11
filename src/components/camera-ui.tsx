@@ -678,5 +678,3 @@ const TranslatedTextBox = ({ translated }: { translated: { text: string, box: an
     </div>
   );
 }
-
-    
