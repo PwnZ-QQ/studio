@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react';
 import Image from 'next/image';
-import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download, Zap, ZapOff, Type, PartyPopper } from 'lucide-react';
+import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download, Zap, ZapOff, Type } from 'lucide-react';
 import PhotoLocationView from './photo-location-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,6 @@ import { useCameraStore } from '@/store/camera-store';
 import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-webgl';
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
-import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
 
 type Prediction = cocoSsd.DetectedObject;
 
@@ -68,11 +67,8 @@ export default function CameraUI() {
   } = useCameraStore();
 
   const [objectModel, setObjectModel] = useState<cocoSsd.ObjectDetection | null>(null);
-  const [faceModel, setFaceModel] = useState<faceLandmarksDetection.FaceLandmarksDetector | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
-  const [faceLandmarks, setFaceLandmarks] = useState<faceLandmarksDetection.Face[]>([]);
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const faceDetectionFrameRef = useRef<number | null>(null);
 
   const qrIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -93,10 +89,6 @@ export default function CameraUI() {
       await tf.ready();
       const loadedObjectModel = await cocoSsd.load();
       setObjectModel(loadedObjectModel);
-      const loadedFaceModel = await faceLandmarksDetection.load(
-        faceLandmarksDetection.SupportedPackages.mediapipeFacemesh
-      );
-      setFaceModel(loadedFaceModel);
     } catch (err) {
       console.error("Failed to load models", err);
       toast({
@@ -184,14 +176,6 @@ export default function CameraUI() {
     setTranslatedText(null);
   }, []);
 
-  const stopFilterMode = useCallback(() => {
-    if (faceDetectionFrameRef.current) {
-      cancelAnimationFrame(faceDetectionFrameRef.current);
-      faceDetectionFrameRef.current = null;
-    }
-    setFaceLandmarks([]);
-  }, []);
-
   const scanQrCode = useCallback(() => {
     if (videoRef.current && canvasRef.current && !qrCode) {
       const video = videoRef.current;
@@ -252,21 +236,10 @@ export default function CameraUI() {
     }
   }, [objectModel]);
 
-  const detectFaceLandmarks = useCallback(async () => {
-    if (faceModel && videoRef.current && videoRef.current.readyState === 4) {
-      const faces = await faceModel.estimateFaces({
-        input: videoRef.current,
-      });
-      setFaceLandmarks(faces);
-      faceDetectionFrameRef.current = requestAnimationFrame(detectFaceLandmarks);
-    }
-  }, [faceModel]);
-
   useEffect(() => {
     stopArMode();
     stopQrMode();
     stopTextMode();
-    stopFilterMode();
 
     if (mode === 'AR' && isCameraReady && objectModel) {
       detectionIntervalRef.current = setInterval(detectObjects, 100);
@@ -274,20 +247,13 @@ export default function CameraUI() {
       startQrMode();
     } else if (mode === 'TEXT' && isCameraReady && textDetector) {
       textDetectionIntervalRef.current = setInterval(detectText, 1000);
-    } else if (mode === 'FILTER' && isCameraReady && faceModel) {
-        if (facingMode === 'user') {
-            detectFaceLandmarks();
-        } else {
-            toast({ title: "Režim filtru", description: "Přepněte prosím na přední kameru pro použití filtrů."})
-        }
     }
     return () => {
       stopArMode();
       stopQrMode();
       stopTextMode();
-      stopFilterMode();
     }
-  }, [mode, isCameraReady, objectModel, detectObjects, stopArMode, stopQrMode, startQrMode, textDetector, detectText, stopTextMode, faceModel, detectFaceLandmarks, stopFilterMode, facingMode, toast]);
+  }, [mode, isCameraReady, objectModel, detectObjects, stopArMode, stopQrMode, startQrMode, textDetector, detectText, stopTextMode, facingMode, toast]);
 
 
   useEffect(() => {
@@ -303,7 +269,6 @@ export default function CameraUI() {
       stopArMode();
       stopQrMode();
       stopTextMode();
-      stopFilterMode();
       reset();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -334,7 +299,6 @@ export default function CameraUI() {
   const handleFlipCamera = () => {
     stopArMode();
     stopQrMode();
-    stopFilterMode();
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
   };
 
@@ -375,8 +339,8 @@ export default function CameraUI() {
       return;
     }
     
-    if (mode === 'TEXT' || mode === 'FILTER') {
-      if (mode === 'TEXT' && videoRef.current && canvasRef.current && detectedText.length > 0 && !isTranslating) {
+    if (mode === 'TEXT') {
+      if (videoRef.current && canvasRef.current && detectedText.length > 0 && !isTranslating) {
         setIsTranslating(true);
         setTranslatedText(null);
         const video = videoRef.current;
@@ -453,12 +417,11 @@ export default function CameraUI() {
     startQrMode();
   };
   
-  const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR' | 'TEXT' | 'FILTER') => {
+  const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR' | 'TEXT') => {
     setPredictions([]);
     setQrCode(null);
     setDetectedText([]);
     setTranslatedText(null);
-    setFaceLandmarks([]);
     if(isRecording) stopRecording();
     setMode(newMode);
   }
@@ -466,7 +429,7 @@ export default function CameraUI() {
   const ShutterButton = () => (
     <motion.button
       onClick={handleCapture}
-      disabled={!isCameraReady || mode === 'QR' || (mode === 'AR' && !objectModel) || (mode === 'TEXT' && isTranslating) || (mode === 'FILTER' && facingMode !== 'user') }
+      disabled={!isCameraReady || mode === 'QR' || (mode === 'AR' && !objectModel) || (mode === 'TEXT' && isTranslating) }
       className="w-16 h-16 rounded-full bg-white/30 p-1 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       aria-label={t('capture_button_label')}
       whileTap={{ scale: 0.9 }}
@@ -475,7 +438,6 @@ export default function CameraUI() {
         className={cn("w-full h-full rounded-full",
           mode === 'VIDEO' ? 'bg-red-500' : 'bg-white',
           mode === 'TEXT' && 'bg-blue-500',
-          mode === 'FILTER' && 'bg-pink-500',
         )}
         animate={{ 
           scale: isRecording ? 0.6 : 1,
@@ -484,7 +446,6 @@ export default function CameraUI() {
         transition={{ duration: 0.2 }}
       >
         {mode === 'TEXT' && (isTranslating ? <Loader2 className="h-full w-full p-3 text-white animate-spin" /> : <Type className="h-full w-full p-4 text-blue-900" />)}
-        {mode === 'FILTER' && <PartyPopper className="h-full w-full p-3 text-white" />}
       </motion.div>
     </motion.button>
   );
@@ -499,9 +460,6 @@ export default function CameraUI() {
       </button>
       <button onClick={() => handleModeChange('TEXT')} className={cn("transition-colors flex items-center gap-1", mode === 'TEXT' && 'text-accent font-semibold')}>
         <Type className="h-4 w-4" /> Text
-      </button>
-      <button onClick={() => handleModeChange('FILTER')} className={cn("transition-colors flex items-center gap-1", mode === 'FILTER' && 'text-accent font-semibold')}>
-        <PartyPopper className="h-4 w-4" /> Filtr
       </button>
     </div>
   );
@@ -555,53 +513,6 @@ export default function CameraUI() {
                 <p className={cn('absolute -top-6 left-0 text-sm font-semibold px-1 rounded', isPerson ? 'bg-red-500 text-white' : 'bg-accent text-accent-foreground')}>
                     {prediction.class} ({(prediction.score * 100).toFixed(1)}%)
                 </p>
-            </div>
-        );
-    });
-};
-
-const FaceFilterElements = () => {
-    if (!videoRef.current || faceLandmarks.length === 0) return null;
-
-    const video = videoRef.current;
-    const scaleX = video.offsetWidth / video.videoWidth;
-    const scaleY = video.offsetHeight / video.videoHeight;
-    const flip = facingMode === 'user';
-    
-    return faceLandmarks.map((face, faceIndex) => {
-        if (!face.keypoints) return null;
-        
-        // This keypoint is roughly between the eyes.
-        const nose = face.keypoints[4]; 
-        // This keypoint is at the top of the forehead.
-        const forehead = face.keypoints[10]; 
-        
-        const faceWidth = Math.abs(face.box.xMin - face.box.xMax) * scaleX;
-        const hatWidth = faceWidth * 1.5;
-        const hatHeight = hatWidth * 0.5;
-
-        let hatX = (forehead.x - (hatWidth / 2)) * scaleX;
-        const hatY = (forehead.y - hatHeight) * scaleY;
-        
-        if (flip) {
-            hatX = video.offsetWidth - ((forehead.x + (hatWidth / 2)) * scaleX) ;
-        }
-
-
-        return (
-            <div key={faceIndex} className="absolute" style={{
-                left: `${hatX}px`,
-                top: `${hatY}px`,
-                width: `${hatWidth}px`,
-                height: `${hatHeight}px`,
-            }}>
-                <Image 
-                  src="https://lh3.googleusercontent.com/pw/AP1GczOKa-k-XJ5QY_1J4W3-8J6cT8H9U_Y9R8C9D-W4S_bT8vT8B8zY4B8nK8V_B8A=w150"
-                  alt="Top Hat"
-                  width={Math.round(hatWidth)}
-                  height={Math.round(hatHeight)}
-                  style={{ transform: 'rotate(-15deg)'}}
-                />
             </div>
         );
     });
@@ -667,12 +578,12 @@ const TranslatedTextBox = ({ translated }: { translated: { text: string, box: an
         <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
         <canvas ref={canvasRef} className="hidden" />
 
-        {(!isCameraReady || (mode === 'AR' && !objectModel) || (mode === 'TEXT' && !textDetector) || (mode === 'FILTER' && !faceModel)) && (
+        {(!isCameraReady || (mode === 'AR' && !objectModel) || (mode === 'TEXT' && !textDetector)) && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-white" />
               <p className="text-white text-sm font-medium">
-                {mode === 'AR' && !objectModel ? 'Nahrávám AI modely...' : mode === 'TEXT' && !textDetector ? 'Nahrávám detektor textu...' : mode === 'FILTER' && !faceModel ? 'Nahrávám obličejový model...' : 'Nahrávám kameru...'}
+                {mode === 'AR' && !objectModel ? 'Nahrávám AI modely...' : mode === 'TEXT' && !textDetector ? 'Nahrávám detektor textu...' : 'Nahrávám kameru...'}
               </p>
             </div>
           </div>
@@ -681,7 +592,6 @@ const TranslatedTextBox = ({ translated }: { translated: { text: string, box: an
         {mode === 'AR' && isCameraReady && objectModel && <ArObjectBoxes />}
         {mode === 'TEXT' && isCameraReady && textDetector && !translatedText && <TextObjectBoxes texts={detectedText} />}
         {mode === 'TEXT' && translatedText && <TranslatedTextBox translated={translatedText} />}
-        {mode === 'FILTER' && isCameraReady && faceModel && <FaceFilterElements />}
 
         <AnimatePresence>
         {mode === 'QR' && qrCode && (

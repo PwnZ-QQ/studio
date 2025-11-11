@@ -2,7 +2,7 @@
 
 import { create } from 'zustand';
 
-type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR' | 'TEXT' | 'FILTER';
+type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR' | 'TEXT';
 
 interface ArObject {
   label: string;
