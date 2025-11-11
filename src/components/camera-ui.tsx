@@ -32,6 +32,8 @@ export default function CameraUI() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
+  const touchStartDistance = useRef<number>(0);
+  const lastZoom = useRef<number>(1);
 
   const { toast } = useToast();
   const t = useTranslations('CameraUI');
@@ -126,6 +128,7 @@ export default function CameraUI() {
             max: capabilities.zoom.max,
             step: capabilities.zoom.step,
           });
+          lastZoom.current = 1;
         }
         
         videoRef.current.onloadedmetadata = () => {
@@ -236,14 +239,45 @@ export default function CameraUI() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facingMode]);
   
-  const handleZoomChange = (newZoom: number) => {
+  const handleZoomChange = useCallback((newZoom: number) => {
     if (videoTrack && zoomCapabilities) {
         try {
-            videoTrack.applyConstraints({ advanced: [{ zoom: newZoom }] });
-            setZoom(newZoom);
+            const clampedZoom = Math.max(zoomCapabilities.min, Math.min(newZoom, zoomCapabilities.max));
+            videoTrack.applyConstraints({ advanced: [{ zoom: clampedZoom }] });
+            setZoom(clampedZoom);
         } catch (error) {
             console.error('Zoom not supported or value out of range:', error);
         }
+    }
+  }, [videoTrack, zoomCapabilities, setZoom]);
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLVideoElement>) => {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        touchStartDistance.current = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+        lastZoom.current = zoom;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLVideoElement>) => {
+      if (e.touches.length === 2 && zoomCapabilities) {
+          e.preventDefault();
+          const currentDistance = Math.hypot(
+              e.touches[0].pageX - e.touches[1].pageX,
+              e.touches[0].pageY - e.touches[1].pageY
+          );
+          const zoomFactor = currentDistance / touchStartDistance.current;
+          const newZoom = lastZoom.current * zoomFactor;
+          handleZoomChange(newZoom);
+      }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLVideoElement>) => {
+    if (e.touches.length < 2) {
+        touchStartDistance.current = 0;
     }
   };
 
@@ -510,7 +544,16 @@ const TranslatedTextBox = ({ translated }: { translated: { text: string, box: an
   return (
     <div className="h-full w-full bg-black flex flex-col">
       <div className="relative flex-1 overflow-hidden">
-        <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          playsInline 
+          muted 
+          className="h-full w-full object-cover" 
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        />
         <canvas ref={canvasRef} className="hidden" />
 
         {(!isCameraReady || (mode === 'AR' && !objectModel)) && (
