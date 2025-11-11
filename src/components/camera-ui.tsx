@@ -1,18 +1,18 @@
 'use client';
 
 import { useRef, useEffect, useCallback, useState } from 'react';
-import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download, Zap, ZapOff } from 'lucide-react';
+import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download, Zap, ZapOff, Type } from 'lucide-react';
 import PhotoLocationView from './photo-location-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
-import { identifyObject } from '@/app/actions';
+import { identifyObject, translateTextInImage } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ArSnapshotView from './ar-snapshot-view';
 import { Wand2 } from 'lucide-react';
 import { Slider } from './ui/slider';
 import jsQR from 'jsqr';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import LanguageSwitcher from './language-switcher';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCameraStore } from '@/store/camera-store';
@@ -33,6 +33,7 @@ export default function CameraUI() {
 
   const { toast } = useToast();
   const t = useTranslations('CameraUI');
+  const locale = useLocale();
 
   const {
     mode,
@@ -69,6 +70,18 @@ export default function CameraUI() {
   const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const qrIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const [textDetector, setTextDetector] = useState<any | null>(null);
+  const textDetectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [detectedText, setDetectedText] = useState<{ text: string, box: any }[]>([]);
+  const [translatedText, setTranslatedText] = useState<{ text: string, box: any } | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  useEffect(() => {
+    if ('TextDetector' in window) {
+      setTextDetector(new (window as any).TextDetector());
+    }
+  }, []);
 
   const loadModels = useCallback(async () => {
     try {
@@ -152,6 +165,15 @@ export default function CameraUI() {
       qrIntervalRef.current = null;
     }
   }, []);
+  
+  const stopTextMode = useCallback(() => {
+    if (textDetectionIntervalRef.current) {
+      clearInterval(textDetectionIntervalRef.current);
+      textDetectionIntervalRef.current = null;
+    }
+    setDetectedText([]);
+    setTranslatedText(null);
+  }, []);
 
   const scanQrCode = useCallback(() => {
     if (videoRef.current && canvasRef.current && !qrCode) {
@@ -180,6 +202,50 @@ export default function CameraUI() {
         qrIntervalRef.current = setInterval(scanQrCode, 500);
     }
   }, [isCameraReady, qrCode, stopQrMode, scanQrCode]);
+  
+  const detectText = useCallback(async () => {
+    if (textDetector && videoRef.current && videoRef.current.readyState === 4 && !isTranslating) {
+        try {
+            const texts = await textDetector.detect(videoRef.current);
+            if (texts.length > 0) {
+              const allText = texts.map((t: any) => t.rawValue).join(' ');
+              const combinedBox = texts.reduce((acc: any, curr: any) => {
+                if (!acc) return curr.boundingBox;
+                const x = Math.min(acc.x, curr.boundingBox.x);
+                const y = Math.min(acc.y, curr.boundingBox.y);
+                const width = Math.max(acc.x + acc.width, curr.boundingBox.x + curr.boundingBox.width) - x;
+                const height = Math.max(acc.y + acc.height, curr.boundingBox.y + curr.boundingBox.height) - y;
+                return { x, y, width, height };
+              }, null);
+
+                setDetectedText([{ text: allText, box: combinedBox }]);
+            } else {
+              setDetectedText([]);
+            }
+        } catch (err) {
+            console.error('Text detection failed:', err);
+        }
+    }
+  }, [textDetector, isTranslating]);
+
+  useEffect(() => {
+    stopArMode();
+    stopQrMode();
+    stopTextMode();
+    if (mode === 'AR' && isCameraReady && objectModel) {
+      detectionIntervalRef.current = setInterval(detectObjects, 100);
+    } else if (mode === 'QR' && isCameraReady) {
+      startQrMode();
+    } else if (mode === 'TEXT' && isCameraReady && textDetector) {
+      textDetectionIntervalRef.current = setInterval(detectText, 1000);
+    }
+    return () => {
+      stopArMode();
+      stopQrMode();
+      stopTextMode();
+    }
+  }, [mode, isCameraReady, objectModel, detectObjects, stopArMode, stopQrMode, startQrMode, textDetector, detectText, stopTextMode]);
+
 
   useEffect(() => {
     loadModels();
@@ -193,6 +259,7 @@ export default function CameraUI() {
       }
       stopArMode();
       stopQrMode();
+      stopTextMode();
       reset();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,20 +271,6 @@ export default function CameraUI() {
       setPredictions(detectedObjects);
     }
   }, [objectModel]);
-
-  useEffect(() => {
-    stopArMode();
-    stopQrMode();
-    if (mode === 'AR' && isCameraReady && objectModel) {
-      detectionIntervalRef.current = setInterval(detectObjects, 100);
-    } else if (mode === 'QR' && isCameraReady) {
-      startQrMode();
-    }
-    return () => {
-      stopArMode();
-      stopQrMode();
-    }
-  }, [mode, isCameraReady, objectModel, detectObjects, stopArMode, stopQrMode, startQrMode]);
 
   const handleZoomChange = (newZoom: number) => {
     if (videoTrack && zoomCapabilities) {
@@ -283,6 +336,33 @@ export default function CameraUI() {
       }
       return;
     }
+    
+    if (mode === 'TEXT') {
+      if (videoRef.current && canvasRef.current && detectedText.length > 0 && !isTranslating) {
+        setIsTranslating(true);
+        setTranslatedText(null);
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
+        if (context) {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+            
+            const result = await translateTextInImage(dataUrl, locale === 'cs' ? 'Czech' : 'English');
+            
+            if (result.translatedText) {
+                setTranslatedText({ text: result.translatedText, box: detectedText[0].box });
+            } else {
+                toast({ variant: 'destructive', title: "Translation Failed", description: result.error });
+            }
+        }
+        setIsTranslating(false);
+      }
+      return;
+    }
+
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -335,9 +415,11 @@ export default function CameraUI() {
     startQrMode();
   };
   
-  const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR') => {
+  const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR' | 'TEXT') => {
     setPredictions([]);
     setQrCode(null);
+    setDetectedText([]);
+    setTranslatedText(null);
     if(isRecording) stopRecording();
     setMode(newMode);
   }
@@ -345,31 +427,37 @@ export default function CameraUI() {
   const ShutterButton = () => (
     <motion.button
       onClick={handleCapture}
-      disabled={!isCameraReady || mode === 'QR' || (mode === 'AR' && !objectModel)}
+      disabled={!isCameraReady || mode === 'QR' || (mode === 'AR' && !objectModel) || (mode === 'TEXT' && isTranslating)}
       className="w-16 h-16 rounded-full bg-white/30 p-1 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       aria-label={t('capture_button_label')}
       whileTap={{ scale: 0.9 }}
     >
       <motion.div 
         className={cn("w-full h-full rounded-full",
-          mode === 'VIDEO' ? 'bg-red-500' : 'bg-white'
+          mode === 'VIDEO' ? 'bg-red-500' : 'bg-white',
+          mode === 'TEXT' && 'bg-blue-500'
         )}
         animate={{ 
           scale: isRecording ? 0.6 : 1,
           borderRadius: isRecording ? '20%' : '50%'
         }}
         transition={{ duration: 0.2 }}
-      />
+      >
+        {mode === 'TEXT' && (isTranslating ? <Loader2 className="h-full w-full p-3 text-white animate-spin" /> : <Type className="h-full w-full p-4 text-blue-900" />)}
+      </motion.div>
     </motion.button>
   );
 
   const ModeSwitcher = () => (
-    <div className="flex items-center justify-center gap-6 text-sm font-medium text-white/80">
+    <div className="flex items-center justify-center gap-4 text-sm font-medium text-white/80">
       <button onClick={() => handleModeChange('QR')} className={cn("transition-colors", mode === 'QR' && 'text-accent font-semibold')}>{t('mode_qr')}</button>
       <button onClick={() => handleModeChange('PHOTO')} className={cn("transition-colors", mode === 'PHOTO' && 'text-accent font-semibold')}>{t('mode_photo')}</button>
       <button onClick={() => handleModeChange('VIDEO')} className={cn("transition-colors", mode === 'VIDEO' && 'text-accent font-semibold')}>{t('mode_video')}</button>
       <button onClick={() => handleModeChange('AR')} className={cn("transition-colors flex items-center gap-1", mode === 'AR' && 'text-accent font-semibold')}>
         <Wand2 className="h-4 w-4" /> {t('mode_ar')}
+      </button>
+      <button onClick={() => handleModeChange('TEXT')} className={cn("transition-colors flex items-center gap-1", mode === 'TEXT' && 'text-accent font-semibold')}>
+        <Type className="h-4 w-4" /> Text
       </button>
     </div>
   );
@@ -428,24 +516,80 @@ export default function CameraUI() {
     });
 };
 
+const TextObjectBoxes = ({ texts }: { texts: { text: string, box: any }[] }) => {
+  if (!videoRef.current) return null;
+  const { videoWidth, videoHeight } = videoRef.current;
+  const { offsetWidth, offsetHeight } = videoRef.current;
+  const scaleX = offsetWidth / videoWidth;
+  const scaleY = offsetHeight / videoHeight;
+
+  return texts.map(({ text, box }, index) => {
+      const { x, y, width, height } = box;
+      return (
+          <div
+              key={index}
+              className="absolute border-2 border-blue-500 bg-black/30"
+              style={{
+                  left: `${x * scaleX}px`,
+                  top: `${y * scaleY}px`,
+                  width: `${width * scaleX}px`,
+                  height: `${height * scaleY}px`,
+              }}
+          >
+          </div>
+      );
+  });
+};
+
+const TranslatedTextBox = ({ translated }: { translated: { text: string, box: any } | null }) => {
+  if (!translated || !videoRef.current) return null;
+  const { videoWidth, videoHeight } = videoRef.current;
+  const { offsetWidth, offsetHeight } = videoRef.current;
+  const scaleX = offsetWidth / videoWidth;
+  const scaleY = offsetHeight / videoHeight;
+
+  const { x, y, width, height } = translated.box;
+
+  return (
+    <div
+      className="absolute flex items-center justify-center p-2 bg-black/70 rounded-md"
+      style={{
+          left: `${x * scaleX}px`,
+          top: `${y * scaleY}px`,
+          width: `${width * scaleX}px`,
+          height: `${height * scaleY}px`,
+          transform: `translateY(-100%)`,
+      }}
+    >
+      <p className="text-white text-sm font-semibold text-center">{translated.text}</p>
+      <Button variant="ghost" size="icon" className="absolute -top-3 -right-3 h-6 w-6 text-white bg-black/50 rounded-full" onClick={() => setTranslatedText(null)}>
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+};
+
+
   return (
     <div className="h-full w-full bg-black flex flex-col">
       <div className="relative flex-1 overflow-hidden">
         <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
         <canvas ref={canvasRef} className="hidden" />
 
-        {(!isCameraReady || (mode === 'AR' && !objectModel)) && (
+        {(!isCameraReady || (mode === 'AR' && !objectModel) || (mode === 'TEXT' && !textDetector)) && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-white" />
               <p className="text-white text-sm font-medium">
-                {mode === 'AR' && !objectModel ? 'Nahrávám AI modely...' : 'Nahrávám kameru...'}
+                {mode === 'AR' && !objectModel ? 'Nahrávám AI modely...' : mode === 'TEXT' && !textDetector ? 'Nahrávám detektor textu...' : 'Nahrávám kameru...'}
               </p>
             </div>
           </div>
         )}
         
         {mode === 'AR' && isCameraReady && objectModel && <ArObjectBoxes />}
+        {mode === 'TEXT' && isCameraReady && textDetector && !translatedText && <TextObjectBoxes texts={detectedText} />}
+        {mode === 'TEXT' && translatedText && <TranslatedTextBox translated={translatedText} />}
 
         <AnimatePresence>
         {mode === 'QR' && qrCode && (
