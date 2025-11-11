@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -73,15 +73,17 @@ export default function DynamicMap() {
         scrollWheelZoom={false}
         placeholder={<MapPlaceholder />}
     >
-        <a href={`https://www.google.com/maps/search/?api=1&query=${position?.latitude},${position?.longitude}`} target="_blank" rel="noopener noreferrer" className="h-full w-full block">
-            <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <Marker position={[position.latitude, position.longitude]} icon={icon}>
-              <Popup>{t('popup_text')}</Popup>
-            </Marker>
-        </a>
+        <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Marker position={[position.latitude, position.longitude]} icon={icon}>
+          <Popup>
+            <a href={`https://www.google.com/maps/search/?api=1&query=${position?.latitude},${position?.longitude}`} target="_blank" rel="noopener noreferrer">
+              {t('popup_text')}
+            </a>
+          </Popup>
+        </Marker>
     </MapContainer>
   );
 }
