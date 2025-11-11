@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Link as LinkIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { ScrollArea } from './ui/scroll-area';
 import { useTranslations } from 'next-intl';
@@ -23,15 +23,19 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
   ), [imageSrc, t]);
 
   const isProcessing = label === tCamera('ar_processing') || description === '';
+  const objectSearchUrl = useMemo(() => {
+    if (isProcessing || label === 'Object not identified') return null;
+    return `https://www.google.com/search?q=${encodeURIComponent(label)}`;
+  }, [label, isProcessing]);
 
   return (
     <motion.div 
-      className="absolute inset-0 bg-black/60 backdrop-blur-md z-10 flex flex-col items-center justify-end p-4 gap-4"
+      className="absolute inset-0 bg-black/50 backdrop-blur-lg z-10 flex flex-col items-center justify-end p-4 gap-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-10 w-10 rounded-full bg-black/30 text-white" onClick={onBack}>
+      <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-10 w-10 rounded-full bg-black/30 text-white hover:bg-black/50" onClick={onBack}>
           <X className="h-5 w-5" />
       </Button>
 
@@ -39,10 +43,10 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
         initial={{ scale: 0.95, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.95, y: 20 }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         className="w-full max-w-sm"
       >
-        <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border-2 border-white/50 shadow-2xl">
+        <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl">
           {memoizedImage}
         </div>
       </motion.div>
@@ -50,26 +54,33 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
       <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="w-full max-w-sm bg-background/80 backdrop-blur-lg p-4 rounded-xl border border-white/10 flex-grow flex flex-col"
+        transition={{ delay: 0.1, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+        className="w-full max-w-sm bg-transparent p-4 rounded-xl flex-grow flex flex-col"
       >
-        <h3 className="text-xl font-semibold text-foreground text-center mb-4">{t('title')}</h3>
-        <div className="text-center p-4 bg-muted/50 rounded-lg flex-1 flex flex-col">
-          <p className="text-sm text-muted-foreground mb-1">{t('identified_object_label')}</p>
-          <div className="font-semibold text-2xl text-foreground flex items-center justify-center gap-2">
-            {isProcessing && label !== 'Object not identified' ? <Loader2 className="h-6 w-6 animate-spin" /> : null}
-            <p>{label}</p>
+        <h3 className="text-2xl font-bold text-white text-center mb-4" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>{t('title')}</h3>
+        <div className="text-center p-4 bg-black/20 rounded-xl border border-white/10 flex-1 flex flex-col backdrop-blur-sm">
+          <p className="text-sm text-white/70 mb-1">{t('identified_object_label')}</p>
+          <div className="font-bold text-3xl text-white flex items-center justify-center gap-3" style={{ textShadow: '0 2px 6px rgba(0,0,0,0.7)' }}>
+            {isProcessing && label !== 'Object not identified' ? <Loader2 className="h-7 w-7 animate-spin" /> : null}
+            {objectSearchUrl ? (
+                <a href={objectSearchUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline">
+                    <span>{label}</span>
+                    <LinkIcon className="h-5 w-5 text-white/70" />
+                </a>
+            ) : (
+                <p>{label}</p>
+            )}
           </div>
           
-          <div className="mt-4 pt-4 border-t border-muted-foreground/20 flex-1 flex flex-col min-h-0">
-            <p className="text-sm text-muted-foreground mb-1">{t('description_label')}</p>
+          <div className="mt-4 pt-4 border-t border-white/20 flex-1 flex flex-col min-h-0">
+            <p className="text-sm text-white/70 mb-2">{t('description_label')}</p>
             <ScrollArea className="mt-1 text-left flex-1">
                 {isProcessing ? (
                   <div className="flex items-center justify-center h-full">
-                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                     <Loader2 className="h-5 w-5 animate-spin text-white/70" />
                   </div>
                 ) : (
-                  <p className="text-sm text-foreground/80">{description}</p>
+                  <p className="text-sm text-white/90" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>{description}</p>
                 )}
             </ScrollArea>
           </div>
