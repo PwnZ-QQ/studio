@@ -1,0 +1,35 @@
+diff --git a/node_modules/@tensorflow-models/face-landmarks-detection/dist/face-landmarks-detection.esm.js b/node_modules/@tensorflow-models/face-landmarks-detection/dist/face-landmarks-detection.esm.js
+index 9e54536..c7c130d 100644
+--- a/node_modules/@tensorflow-models/face-landmarks-detection/dist/face-landmarks-detection.esm.js
++++ b/node_modules/@tensorflow-models/face-landmarks-detection/dist/face-landmarks-detection.esm.js
+@@ -14,7 +14,7 @@
+  * =============================================================================
+  */
+ 
+-import * as t from '@mediapipe/face_mesh';
++import t from '@mediapipe/face_mesh';
+ import * as e from '@tensorflow/tfjs-core';
+ import {
+ 	Tensor as n,
+diff --git a/node_modules/@tensorflow-models/face-landmarks-detection/dist/face-landmarks-detection.js b/node_modules/@tensorflow-models/face-landmarks-detection/dist/face-landmarks-detection.js
+index 7228bae..6800742 100644
+--- a/node_modules/@tensorflow-models/face-landmarks-detection/dist/face-landmarks-detection.js
++++ b/node_modules/@tensorflow-models/face-landmarks-detection/dist/face-landmarks-detection.js
+@@ -17,7 +17,7 @@
+  *   limitations under the License.
+  * =============================================================================
+  */
+-Object.defineProperty(exports, "__esModule", { value: true });
++exports.__esModule = true;
+ var face_mesh_1 = require("@mediapipe/face_mesh");
+ var tf = require("@tensorflow/tfjs-core");
+ var tfjs_core_1 = require("@tensorflow/tfjs-core");
+@@ -37,7 +37,7 @@
+         this.width = 0;
+         this.height = 0;
+         this.selfieMode = false;
+-        this.faceMeshSolution = new face_mesh_1.FaceMesh({
++        this.faceMeshSolution = new face_mesh_1.default({
+             locateFile: function (file, path) {
+                 if (config.solutionPath) {
+                     var solutionPath = config.solutionPath.replace(/\/+$/, '');
