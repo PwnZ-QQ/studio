@@ -1,5 +1,7 @@
 import { config } from 'dotenv';
 config();
+import { googleAI } from '@genkit-ai/google-genai';
+
 
 import '@/ai/flows/real-time-text-translation.ts';
 import '@/ai/flows/object-identification.ts';

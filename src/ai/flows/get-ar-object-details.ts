@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 const ArObjectDetailsInputSchema = z.object({
   photoDataUri: z
@@ -37,12 +38,13 @@ const prompt = ai.definePrompt({
   output: {schema: ArObjectDetailsOutputSchema},
   prompt: `You are an object identification AI. You will be given an image of an object.
 1. Identify the main object in the image.
-2. Provide a short, one-paragraph description of that object.
+2. Provide a short, one-paragraph description of that object. Use Google Search to find interesting and relevant facts to include in the description.
 3. Translate both the object name and the description into the specified language.
 
 Image: {{media url=photoDataUri}}
 Target Language: {{{targetLanguage}}}
 `,
+  tools: [googleAI.googleSearchTool()],
 });
 
 const getArObjectDetailsFlow = ai.defineFlow(
