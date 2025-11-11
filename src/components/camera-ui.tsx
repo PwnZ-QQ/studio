@@ -73,18 +73,9 @@ export default function CameraUI() {
 
   const qrIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
-  const [textDetector, setTextDetector] = useState<any | null>(null);
-  const textDetectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [detectedText, setDetectedText] = useState<{ text: string, box: any }[]>([]);
   const [translatedText, setTranslatedText] = useState<{ text: string, box: any } | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
   const [showStats, setShowStats] = useState(false);
-
-  useEffect(() => {
-    if ('TextDetector' in window) {
-      setTextDetector(new (window as any).TextDetector());
-    }
-  }, []);
 
   const loadModels = useCallback(async () => {
     try {
@@ -170,11 +161,6 @@ export default function CameraUI() {
   }, []);
   
   const stopTextMode = useCallback(() => {
-    if (textDetectionIntervalRef.current) {
-      clearInterval(textDetectionIntervalRef.current);
-      textDetectionIntervalRef.current = null;
-    }
-    setDetectedText([]);
     setTranslatedText(null);
   }, []);
 
@@ -205,31 +191,6 @@ export default function CameraUI() {
         qrIntervalRef.current = setInterval(scanQrCode, 500);
     }
   }, [isCameraReady, qrCode, stopQrMode, scanQrCode]);
-  
-  const detectText = useCallback(async () => {
-    if (textDetector && videoRef.current && videoRef.current.readyState === 4 && !isTranslating) {
-        try {
-            const texts = await textDetector.detect(videoRef.current);
-            if (texts.length > 0) {
-              const allText = texts.map((t: any) => t.rawValue).join(' ');
-              const combinedBox = texts.reduce((acc: any, curr: any) => {
-                if (!acc) return curr.boundingBox;
-                const x = Math.min(acc.x, curr.boundingBox.x);
-                const y = Math.min(acc.y, curr.boundingBox.y);
-                const width = Math.max(acc.x + acc.width, curr.boundingBox.x + curr.boundingBox.width) - x;
-                const height = Math.max(acc.y + acc.height, curr.boundingBox.y + curr.boundingBox.height) - y;
-                return { x, y, width, height };
-              }, null);
-
-                setDetectedText([{ text: allText, box: combinedBox }]);
-            } else {
-              setDetectedText([]);
-            }
-        } catch (err) {
-            console.error('Text detection failed:', err);
-        }
-    }
-  }, [textDetector, isTranslating]);
 
   const detectObjects = useCallback(async () => {
     if (objectModel && videoRef.current && videoRef.current.readyState === 4) {
@@ -251,8 +212,6 @@ export default function CameraUI() {
       detectionIntervalRef.current = setInterval(detectObjects, 100);
     } else if (mode === 'QR' && isCameraReady) {
       startQrMode();
-    } else if (mode === 'TEXT' && isCameraReady && textDetector) {
-      textDetectionIntervalRef.current = setInterval(detectText, 1000);
     }
     
     return () => {
@@ -260,7 +219,7 @@ export default function CameraUI() {
       stopQrMode();
       stopTextMode();
     }
-  }, [mode, isCameraReady, objectModel, detectObjects, stopArMode, stopQrMode, startQrMode, textDetector, detectText, stopTextMode]);
+  }, [mode, isCameraReady, objectModel, detectObjects, stopArMode, stopQrMode, startQrMode, stopTextMode]);
 
 
   useEffect(() => {
@@ -343,7 +302,7 @@ export default function CameraUI() {
     }
     
     if (mode === 'TEXT') {
-      if (videoRef.current && canvasRef.current && detectedText.length > 0 && !isTranslating) {
+      if (videoRef.current && canvasRef.current && !isTranslating) {
         setIsTranslating(true);
         setTranslatedText(null);
         const video = videoRef.current;
@@ -358,7 +317,7 @@ export default function CameraUI() {
             const result = await translateTextInImage(dataUrl, locale === 'cs' ? 'Czech' : 'English');
             
             if (result.translatedText) {
-                setTranslatedText({ text: result.translatedText, box: detectedText[0].box });
+                setTranslatedText({ text: result.translatedText, box: { x: 0, y: 0, width: canvas.width, height: canvas.height/4 } });
             } else {
                 toast({ variant: 'destructive', title: "Translation Failed", description: result.error });
             }
@@ -423,7 +382,6 @@ export default function CameraUI() {
   const handleModeChange = (newMode: 'PHOTO' | 'VIDEO' | 'QR' | 'AR' | 'TEXT') => {
     setPredictions([]);
     setQrCode(null);
-    setDetectedText([]);
     setTranslatedText(null);
     if(isRecording) stopRecording();
     setMode(newMode);
@@ -521,31 +479,6 @@ export default function CameraUI() {
     });
 };
 
-const TextObjectBoxes = ({ texts }: { texts: { text: string, box: any }[] }) => {
-  if (!videoRef.current) return null;
-  const { videoWidth, videoHeight } = videoRef.current;
-  const { offsetWidth, offsetHeight } = videoRef.current;
-  const scaleX = offsetWidth / videoWidth;
-  const scaleY = offsetHeight / videoHeight;
-
-  return texts.map(({ text, box }, index) => {
-      const { x, y, width, height } = box;
-      return (
-          <div
-              key={index}
-              className="absolute border-2 border-blue-500 bg-black/30"
-              style={{
-                  left: `${x * scaleX}px`,
-                  top: `${y * scaleY}px`,
-                  width: `${width * scaleX}px`,
-                  height: `${height * scaleY}px`,
-              }}
-          >
-          </div>
-      );
-  });
-};
-
 const TranslatedTextBox = ({ translated }: { translated: { text: string, box: any } | null }) => {
   if (!translated || !videoRef.current) return null;
   const { videoWidth, videoHeight } = videoRef.current;
@@ -563,7 +496,6 @@ const TranslatedTextBox = ({ translated }: { translated: { text: string, box: an
           top: `${y * scaleY}px`,
           width: `${width * scaleX}px`,
           height: `${height * scaleY}px`,
-          transform: `translateY(-100%)`,
       }}
     >
       <p className="text-white text-sm font-semibold text-center">{translated.text}</p>
@@ -581,19 +513,18 @@ const TranslatedTextBox = ({ translated }: { translated: { text: string, box: an
         <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
         <canvas ref={canvasRef} className="hidden" />
 
-        {(!isCameraReady || (mode === 'AR' && !objectModel) || (mode === 'TEXT' && !textDetector)) && (
+        {(!isCameraReady || (mode === 'AR' && !objectModel)) && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <div className="flex flex-col items-center gap-2">
               <Loader2 className="h-8 w-8 animate-spin text-white" />
               <p className="text-white text-sm font-medium">
-                {mode === 'AR' && !objectModel ? 'Nahrávám AI modely...' : mode === 'TEXT' && !textDetector ? 'Nahrávám detektor textu...' : 'Nahrávám kameru...'}
+                {mode === 'AR' && !objectModel ? 'Nahrávám AI modely...' : 'Nahrávám kameru...'}
               </p>
             </div>
           </div>
         )}
         
         {mode === 'AR' && isCameraReady && objectModel && <ArObjectBoxes />}
-        {mode === 'TEXT' && isCameraReady && textDetector && !translatedText && <TextObjectBoxes texts={detectedText} />}
         {mode === 'TEXT' && translatedText && <TranslatedTextBox translated={translatedText} />}
 
         <AnimatePresence>
