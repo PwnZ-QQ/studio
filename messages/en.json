@@ -37,5 +37,8 @@
   },
   "LanguageSwitcher": {
     "locale": "{locale, select, cs {Čeština} en {English} other {Unknown}}"
+  },
+  "CameraStats": {
+    "title": "Usage Statistics"
   }
 }

@@ -2,13 +2,14 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react';
 import Image from 'next/image';
-import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download, Zap, ZapOff, Type, Smile } from 'lucide-react';
+import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download, Zap, ZapOff, Type, Smile, BarChart2 } from 'lucide-react';
 import PhotoLocationView from './photo-location-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 import { identifyObject, translateTextInImage } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
 import ArSnapshotView from './ar-snapshot-view';
+import CameraStats from './camera-stats';
 import { Wand2 } from 'lucide-react';
 import { Slider } from './ui/slider';
 import jsQR from 'jsqr';
@@ -77,6 +78,7 @@ export default function CameraUI() {
   const [detectedText, setDetectedText] = useState<{ text: string, box: any }[]>([]);
   const [translatedText, setTranslatedText] = useState<{ text: string, box: any } | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   useEffect(() => {
     if ('TextDetector' in window) {
@@ -632,6 +634,10 @@ const TranslatedTextBox = ({ translated }: { translated: { text: string, box: an
           {recordedVideo && <VideoPreview />}
         </AnimatePresence>
 
+        <AnimatePresence>
+            {showStats && <CameraStats onBack={() => setShowStats(false)} />}
+        </AnimatePresence>
+
 
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
             <LanguageSwitcher />
@@ -640,6 +646,9 @@ const TranslatedTextBox = ({ translated }: { translated: { text: string, box: an
                     {isTorchOn ? <ZapOff className="h-5 w-5" /> : <Zap className="h-5 w-5" />}
                 </Button>
             )}
+            <Button variant="ghost" size="icon" onClick={() => setShowStats(true)} className="text-white bg-black/30 backdrop-blur-sm hover:bg-black/40 hover:text-white rounded-full h-10 w-10">
+                <BarChart2 className="h-5 w-5" />
+            </Button>
         </div>
         <div className="absolute top-4 right-4 z-10">
             <Button variant="ghost" size="icon" onClick={handleFlipCamera} className="text-white bg-black/30 backdrop-blur-sm hover:bg-black/40 hover:text-white rounded-full h-10 w-10">
