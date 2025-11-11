@@ -8,6 +8,10 @@ import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import Map, { Marker } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import mapboxgl from 'mapbox-gl';
+
+// @ts-ignore
+mapboxgl.accessToken = 'pk.eyJ1IjoiZGV2LXRlYW0tYXJ0ZWZ1c2lvbiIsImEiOiJjbHh2cWJpczIycDVvMmtwZ2g0dGxlcnhxIn0.DA3r2A8S6qT5c1I-sy9bOQ';
 
 interface PhotoLocationViewProps {
   imageSrc: string;
@@ -47,7 +51,6 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
     if (!isClient || !position) return null;
     return (
       <Map
-        mapboxAccessToken="pk.eyJ1IjoiZGV2LXRlYW0tYXJ0ZWZ1c2lvbiIsImEiOiJjbHh2cWJpczIycDVvMmtwZ2g0dGxlcnhxIn0.DA3r2A8S6qT5c1I-sy9bOQ"
         initialViewState={{
           ...position,
           zoom: 14,
