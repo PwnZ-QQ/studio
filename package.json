@@ -49,6 +49,7 @@
     "framer-motion": "^11.2.10",
     "genkit": "^1.20.0",
     "jsqr": "^1.4.0",
+    "lodash": "^4.17.21",
     "lucide-react": "^0.475.0",
     "mapbox-gl": "^3.4.0",
     "next": "15.3.3",
@@ -66,6 +67,7 @@
     "zustand": "^4.5.2"
   },
   "devDependencies": {
+    "@types/lodash": "^4.17.5",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
