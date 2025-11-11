@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useCallback, useState } from 'react';
-import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download } from 'lucide-react';
+import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download, Zap, ZapOff } from 'lucide-react';
 import TranslationView from './translation-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ import LanguageSwitcher from './language-switcher';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCameraStore } from '@/store/camera-store';
 import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-backend-webgl';
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
 
 type Prediction = cocoSsd.DetectedObject;
@@ -53,6 +54,10 @@ export default function CameraUI() {
     setIsRecording,
     recordedVideo,
     setRecordedVideo,
+    hasTorch,
+    setHasTorch,
+    isTorchOn,
+    setIsTorchOn,
     reset,
   } = useCameraStore();
 
@@ -64,6 +69,7 @@ export default function CameraUI() {
 
   const loadModel = useCallback(async () => {
     try {
+      await tf.setBackend('webgl');
       await tf.ready();
       const loadedModel = await cocoSsd.load();
       setModel(loadedModel);
@@ -81,6 +87,8 @@ export default function CameraUI() {
     setIsCameraReady(false);
     setZoomCapabilities(null);
     setZoom(1);
+    setHasTorch(false);
+    setIsTorchOn(false);
 
     if (videoRef.current) {
       if (videoRef.current.srcObject) {
@@ -98,6 +106,10 @@ export default function CameraUI() {
         setVideoTrack(track);
         
         const capabilities = track.getCapabilities();
+        if ('torch' in capabilities) {
+          setHasTorch(!!capabilities.torch);
+        }
+
         if ('zoom' in capabilities && capabilities.zoom) {
           setZoomCapabilities({
             min: capabilities.zoom.min,
@@ -121,7 +133,7 @@ export default function CameraUI() {
         }
       }
     }
-  }, [facingMode, setIsCameraReady, setVideoTrack, setZoom, setZoomCapabilities, t, toast, setFacingMode]);
+  }, [facingMode, setIsCameraReady, setVideoTrack, setZoom, setZoomCapabilities, t, toast, setFacingMode, setHasTorch, setIsTorchOn]);
 
   const stopArMode = useCallback(() => {
     if (detectionIntervalRef.current) {
@@ -168,6 +180,9 @@ export default function CameraUI() {
 
   useEffect(() => {
     loadModel();
+  }, [loadModel]);
+
+  useEffect(() => {
     startCamera();
     return () => {
       if (videoRef.current && videoRef.current.srcObject) {
@@ -178,7 +193,7 @@ export default function CameraUI() {
       reset();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facingMode, startCamera, stopArMode, stopQrMode, reset, loadModel]);
+  }, [facingMode]);
   
   const detectObjects = useCallback(async () => {
     if (model && videoRef.current && videoRef.current.readyState === 4) {
@@ -211,6 +226,17 @@ export default function CameraUI() {
         }
     }
   };
+
+  const toggleTorch = useCallback(() => {
+    if (videoTrack && hasTorch) {
+      const nextTorchState = !isTorchOn;
+      videoTrack.applyConstraints({ advanced: [{ torch: nextTorchState }] })
+        .then(() => {
+          setIsTorchOn(nextTorchState);
+        })
+        .catch(e => console.error('Failed to toggle torch:', e));
+    }
+  }, [videoTrack, hasTorch, isTorchOn, setIsTorchOn]);
 
   const handleFlipCamera = () => {
     stopArMode();
@@ -460,8 +486,13 @@ export default function CameraUI() {
         </AnimatePresence>
 
 
-        <div className="absolute top-4 left-4 z-10">
+        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
             <LanguageSwitcher />
+             {hasTorch && (
+                <Button variant="ghost" size="icon" onClick={toggleTorch} className={cn("text-white bg-black/20 backdrop-blur-sm hover:bg-black/40 hover:text-white rounded-full", isTorchOn && "text-accent")}>
+                    {isTorchOn ? <ZapOff className="h-6 w-6" /> : <Zap className="h-6 w-6" />}
+                </Button>
+            )}
         </div>
         <div className="absolute top-4 right-4 z-10">
             <Button variant="ghost" size="icon" onClick={handleFlipCamera} className="text-white bg-black/20 backdrop-blur-sm hover:bg-black/40 hover:text-white rounded-full">

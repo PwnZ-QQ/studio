@@ -1,3 +1,5 @@
+'use client';
+
 import { create } from 'zustand';
 
 type Mode = 'PHOTO' | 'VIDEO' | 'QR' | 'AR';
@@ -36,6 +38,10 @@ interface CameraState {
   setIsRecording: (isRecording: boolean) => void;
   recordedVideo: string | null;
   setRecordedVideo: (video: string | null) => void;
+  hasTorch: boolean;
+  setHasTorch: (hasTorch: boolean) => void;
+  isTorchOn: boolean;
+  setIsTorchOn: (isTorchOn: boolean) => void;
   reset: () => void;
 }
 
@@ -51,12 +57,18 @@ const initialState = {
     videoTrack: null,
     isRecording: false,
     recordedVideo: null,
+    hasTorch: false,
+    isTorchOn: false,
 };
 
 export const useCameraStore = create<CameraState>((set) => ({
   ...initialState,
   setMode: (mode) => set({ mode }),
-  setFacingMode: (facingMode) => set(state => ({ facingMode: typeof facingMode === 'function' ? facingMode(state.facingMode) : facingMode })),
+  setFacingMode: (facingMode) => set(state => ({ 
+    facingMode: typeof facingMode === 'function' ? facingMode(state.facingMode) : facingMode,
+    isTorchOn: false, // Turn off torch when flipping camera
+    hasTorch: false, 
+  })),
   setCapturedImage: (image) => set({ capturedImage: image }),
   setIsCameraReady: (isReady) => set({ isCameraReady: isReady }),
   setArSnapshot: (snapshot) => set({ arSnapshot: snapshot }),
@@ -66,5 +78,7 @@ export const useCameraStore = create<CameraState>((set) => ({
   setVideoTrack: (track) => set({ videoTrack: track }),
   setIsRecording: (isRecording) => set({ isRecording }),
   setRecordedVideo: (video) => set({ recordedVideo: video }),
+  setHasTorch: (hasTorch) => set({ hasTorch }),
+  setIsTorchOn: (isTorchOn) => set({ isTorchOn }),
   reset: () => set(initialState),
 }));
