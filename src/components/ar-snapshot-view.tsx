@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { X, Loader2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { ScrollArea } from './ui/scroll-area';
@@ -57,19 +56,23 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
         <h3 className="text-xl font-semibold text-foreground text-center mb-4">{t('title')}</h3>
         <div className="text-center p-4 bg-muted/50 rounded-lg flex-1 flex flex-col">
           <p className="text-sm text-muted-foreground mb-1">{t('identified_object_label')}</p>
-          <div className="font-semibold text-lg text-foreground flex items-center justify-center gap-2">
-            {isProcessing && label !== 'Object not identified' ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
+          <div className="font-semibold text-2xl text-foreground flex items-center justify-center gap-2">
+            {isProcessing && label !== 'Object not identified' ? <Loader2 className="h-6 w-6 animate-spin" /> : null}
             <p>{label}</p>
           </div>
           
-          {!isProcessing && (
-            <>
-              <p className="text-sm text-muted-foreground mt-4 mb-1">{t('description_label')}</p>
-              <ScrollArea className="mt-1 text-left flex-1">
+          <div className="mt-4 pt-4 border-t border-muted-foreground/20 flex-1 flex flex-col min-h-0">
+            <p className="text-sm text-muted-foreground mb-1">{t('description_label')}</p>
+            <ScrollArea className="mt-1 text-left flex-1">
+                {isProcessing ? (
+                  <div className="flex items-center justify-center h-full">
+                     <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
                   <p className="text-sm text-foreground/80">{description}</p>
-              </ScrollArea>
-            </>
-          )}
+                )}
+            </ScrollArea>
+          </div>
         </div>
       </motion.div>
     </motion.div>
