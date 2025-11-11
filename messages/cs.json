@@ -2,7 +2,7 @@
   "PermissionsPage": {
     "title": "Vyžadován přístup ke kameře",
     "description_denied": "Odepřeli jste přístup ke kameře. Chcete-li tuto funkci používat, povolte prosím oprávnění pro kameru v nastavení prohlížeče.",
-    "description_prompt": "Tato aplikace potřebuje přístup k vaší kameře pro focení a poskytování překladu v reálném čase.",
+    "description_prompt": "Tato aplikace potřebuje přístup k vaší kameře pro focení a poskytování real-time překladu.",
     "button": "Povolit kameru"
   },
   "CameraUI": {
@@ -20,28 +20,17 @@
     "camera_error_toast_title": "Chyba kamery",
     "camera_error_toast_description": "Nepodařilo se získat přístup ke kameře."
   },
-  "TranslationView": {
-    "title": "Přeložit obrázek",
-    "select_language_placeholder": "Vyberte jazyk",
-    "translate_button": "Přeložit text",
-    "translation_result_title": "Výsledek překladu",
-    "translation_error_toast_title": "Chyba překladu",
-    "languages": {
-      "Czech": "Čeština",
-      "Spanish": "Španělština",
-      "French": "Francouzština",
-      "German": "Němčina",
-      "Japanese": "Japonština",
-      "Chinese": "Čínština",
-      "Russian": "Ruština",
-      "Arabic": "Arabština",
-      "English": "Angličtina"
-    }
-  },
   "ArSnapshotView": {
     "title": "AR Snímek",
     "identified_object_label": "Identifikovaný objekt",
     "description_label": "Popis"
+  },
+  "PhotoLocationView": {
+    "title": "Fotografie",
+    "location_title": "Místo pořízení",
+    "loading_location": "Získávám polohu...",
+    "location_error": "Nepodařilo se získat polohu.",
+    "popup_text": "Zde jste pořídili fotku."
   },
   "HomePage": {
     "loading": "Načítání..."

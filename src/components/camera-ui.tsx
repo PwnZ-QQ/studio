@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { SwitchCamera, Loader2, ZoomIn, ZoomOut, QrCode, Copy, X, Languages, Download, Zap, ZapOff } from 'lucide-react';
-import TranslationView from './translation-view';
+import PhotoLocationView from './photo-location-view';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 import { identifyObject } from '@/app/actions';
@@ -523,7 +523,7 @@ export default function CameraUI() {
       
       <AnimatePresence>
         {capturedImage && mode === 'PHOTO' && (
-          <TranslationView
+          <PhotoLocationView
             imageSrc={capturedImage}
             onBack={() => setCapturedImage(null)}
           />

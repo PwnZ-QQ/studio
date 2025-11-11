@@ -20,28 +20,17 @@
     "camera_error_toast_title": "Camera Error",
     "camera_error_toast_description": "Failed to access the camera."
   },
-  "TranslationView": {
-    "title": "Translate Image",
-    "select_language_placeholder": "Select language",
-    "translate_button": "Translate Text",
-    "translation_result_title": "Translation Result",
-    "translation_error_toast_title": "Translation Error",
-    "languages": {
-      "Czech": "Czech",
-      "Spanish": "Spanish",
-      "French": "French",
-      "German": "German",
-      "Japanese": "Japanese",
-      "Chinese": "Chinese",
-      "Russian": "Russian",
-      "Arabic": "Arabic",
-      "English": "English"
-    }
-  },
   "ArSnapshotView": {
     "title": "AR Snapshot",
     "identified_object_label": "Identified Object",
     "description_label": "Description"
+  },
+  "PhotoLocationView": {
+    "title": "Photo",
+    "location_title": "Location Taken",
+    "loading_location": "Getting location...",
+    "location_error": "Could not get location.",
+    "popup_text": "You took the photo here."
   },
   "HomePage": {
     "loading": "Loading..."
