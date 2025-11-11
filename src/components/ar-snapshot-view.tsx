@@ -1,12 +1,13 @@
 'use client';
 
-import Image from 'next/image';
+import { Suspense } from 'react';
 import { Button } from './ui/button';
 import { X, Loader2, Link as LinkIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { ScrollArea } from './ui/scroll-area';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
+import ObjectModel from './object-model';
 
 interface ArSnapshotViewProps {
   imageSrc: string;
@@ -18,9 +19,6 @@ interface ArSnapshotViewProps {
 export default function ArSnapshotView({ imageSrc, label, description, onBack }: ArSnapshotViewProps) {
   const t = useTranslations('ArSnapshotView');
   const tCamera = useTranslations('CameraUI');
-  const memoizedImage = useMemo(() => (
-    <Image src={imageSrc} alt={t('title')} fill objectFit="cover" />
-  ), [imageSrc, t]);
 
   const isProcessing = label === tCamera('ar_processing') || description === '';
   const objectSearchUrl = useMemo(() => {
@@ -46,8 +44,10 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
         transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
         className="w-full max-w-sm"
       >
-        <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl">
-          {memoizedImage}
+        <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-white/20 shadow-2xl bg-black">
+          <Suspense fallback={<div className="w-full h-full flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-white"/></div>}>
+            <ObjectModel modelKey={label} />
+          </Suspense>
         </div>
       </motion.div>
 
