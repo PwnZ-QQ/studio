@@ -30,7 +30,7 @@ export default function ArSnapshotView({ imageSrc, label, description, onBack }:
 
   return (
     <motion.div 
-      className="absolute inset-0 bg-black/50 backdrop-blur-lg z-10 flex flex-col items-center justify-end p-4 gap-4"
+      className="absolute inset-0 bg-black/50 backdrop-blur-lg z-10 flex flex-col items-center justify-center p-4 gap-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
