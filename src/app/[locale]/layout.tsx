@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import '../globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import {NextIntlClientProvider, useMessages} from 'next-intl';
+import Providers from '../providers';
 
 export const metadata: Metadata = {
   title: 'Expo Kamera Aplikace',
@@ -27,8 +28,10 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          {children}
-          <Toaster />
+          <Providers>
+            {children}
+            <Toaster />
+          </Providers>
         </NextIntlClientProvider>
       </body>
     </html>
