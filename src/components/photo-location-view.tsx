@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { X, Loader2, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
+import Map, { Marker } from 'react-map-gl';
 
 interface PhotoLocationViewProps {
   imageSrc: string;
@@ -13,19 +14,23 @@ interface PhotoLocationViewProps {
 }
 
 type Position = {
-  lat: number;
-  lng: number;
+  latitude: number;
+  longitude: number;
 };
+
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
 export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationViewProps) {
   const t = useTranslations('PhotoLocationView');
   const [position, setPosition] = useState<Position | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setPosition({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
         setError(null);
       },
       (err) => {
@@ -39,12 +44,26 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
     <Image src={imageSrc} alt={t('title')} fill objectFit="cover" />
   ), [imageSrc, t]);
 
-  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  const mapUrl = useMemo(() => {
-    if (!position || !mapboxToken) return null;
-    const { lng, lat } = position;
-    return `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/pin-s+f74c4c(${lng},${lat})/${lng},${lat},13,0/400x300@2x?access_token=${mapboxToken}`;
-  }, [position, mapboxToken]);
+  const mapComponent = useMemo(() => {
+    if (!isClient || !position) return null;
+    return (
+      <Map
+        mapboxAccessToken={MAPBOX_TOKEN}
+        initialViewState={{
+          ...position,
+          zoom: 14,
+        }}
+        mapStyle="mapbox://styles/mapbox/dark-v11"
+      >
+        <Marker longitude={position.longitude} latitude={position.latitude} anchor="bottom" >
+          <div className="w-8 h-8 flex items-center justify-center">
+            <div className="w-3 h-3 bg-white rounded-full animate-pulse" />
+            <div className="absolute w-8 h-8 bg-blue-500/50 rounded-full animate-ping" />
+          </div>
+        </Marker>
+      </Map>
+    );
+  }, [isClient, position]);
 
   return (
     <motion.div
@@ -80,22 +99,22 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
             {t('location_title')}
         </h3>
         <div className="h-48 w-full rounded-md overflow-hidden bg-muted">
-            {mapUrl ? (
-                <a href={`https://www.google.com/maps/search/?api=1&query=${position?.lat},${position?.lng}`} target="_blank" rel="noopener noreferrer">
-                    <Image src={mapUrl} alt="Map of photo location" fill objectFit="cover" />
-                </a>
-            ) : (
-                <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
-                    {error ? (
-                        <span className="text-destructive">{t('location_error')}</span>
-                    ) : (
-                        <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            {t('loading_location')}
-                        </>
-                    )}
-                </div>
-            )}
+          {position ? (
+            <a href={`https://www.google.com/maps/search/?api=1&query=${position?.latitude},${position?.longitude}`} target="_blank" rel="noopener noreferrer">
+              {mapComponent}
+            </a>
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
+              {error ? (
+                <span className="text-destructive">{t('location_error')}</span>
+              ) : (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('loading_location')}
+                </>
+              )}
+            </div>
+          )}
         </div>
       </motion.div>
     </motion.div>
