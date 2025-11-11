@@ -251,7 +251,7 @@ export default function CameraUI() {
       stopQrMode();
       stopTextMode();
     }
-  }, [mode, isCameraReady, objectModel, stopArMode, stopQrMode, startQrMode, textDetector, detectText, stopTextMode, detectObjects]);
+  }, [mode, isCameraReady, objectModel, detectObjects, stopArMode, stopQrMode, startQrMode, textDetector, detectText, stopTextMode]);
 
 
   useEffect(() => {
