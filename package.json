@@ -9,8 +9,7 @@
     "build": "NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "postinstall": "patch-package"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@genkit-ai/google-genai": "^1.20.0",
@@ -38,7 +37,6 @@
     "@radix-ui/react-toast": "^1.2.6",
     "@radix-ui/react-tooltip": "^1.1.8",
     "@tensorflow-models/coco-ssd": "^2.2.3",
-    "@tensorflow-models/face-landmarks-detection": "^1.0.2",
     "@tensorflow/tfjs": "^4.20.0",
     "@tensorflow/tfjs-backend-webgl": "^4.20.0",
     "class-variance-authority": "^0.7.1",
@@ -54,7 +52,6 @@
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
     "next-intl": "^3.15.3",
-    "patch-package": "^8.0.0",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
@@ -77,8 +74,5 @@
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
-  },
-  "overrides": {
-    "@mediapipe/face_mesh": "0.4.1633559619"
   }
 }
