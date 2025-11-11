@@ -33,7 +33,7 @@ export default function Home() {
   }
 
   return (
-    <main className="bg-neutral-800 flex items-center justify-center min-h-screen p-4">
+    <main className="animated-gradient flex items-center justify-center min-h-screen p-4">
         <div className="w-full max-w-sm mx-auto aspect-[9/16] bg-background text-foreground relative overflow-hidden rounded-2xl shadow-2xl border-4 border-neutral-700">
             {renderContent()}
         </div>
