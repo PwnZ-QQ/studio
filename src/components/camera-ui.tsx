@@ -228,6 +228,13 @@ export default function CameraUI() {
     }
   }, [textDetector, isTranslating]);
 
+  const detectObjects = useCallback(async () => {
+    if (objectModel && videoRef.current && videoRef.current.readyState === 4) {
+      const detectedObjects = await objectModel.detect(videoRef.current);
+      setPredictions(detectedObjects);
+    }
+  }, [objectModel]);
+
   useEffect(() => {
     stopArMode();
     stopQrMode();
@@ -244,7 +251,7 @@ export default function CameraUI() {
       stopQrMode();
       stopTextMode();
     }
-  }, [mode, isCameraReady, objectModel, detectObjects, stopArMode, stopQrMode, startQrMode, textDetector, detectText, stopTextMode]);
+  }, [mode, isCameraReady, objectModel, stopArMode, stopQrMode, startQrMode, textDetector, detectText, stopTextMode, detectObjects]);
 
 
   useEffect(() => {
@@ -265,13 +272,6 @@ export default function CameraUI() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facingMode]);
   
-  const detectObjects = useCallback(async () => {
-    if (objectModel && videoRef.current && videoRef.current.readyState === 4) {
-      const detectedObjects = await objectModel.detect(videoRef.current);
-      setPredictions(detectedObjects);
-    }
-  }, [objectModel]);
-
   const handleZoomChange = (newZoom: number) => {
     if (videoTrack && zoomCapabilities) {
         try {
@@ -516,7 +516,7 @@ export default function CameraUI() {
     });
 };
 
-const TextObjectBoxes = ({ texts }: { texts: { text: string, box: any }[] }) => {
+const TextObjectBoxes = ({ texts }: { text: string, box: any }[]) => {
   if (!videoRef.current) return null;
   const { videoWidth, videoHeight } = videoRef.current;
   const { offsetWidth, offsetHeight } = videoRef.current;
