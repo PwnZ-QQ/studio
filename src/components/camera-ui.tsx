@@ -101,7 +101,8 @@ export default function CameraUI() {
           video: { 
             facingMode: facingMode,
             advanced: [{ focusMode: 'continuous' }]
-          }
+          },
+          audio: true
         });
         videoRef.current.srcObject = stream;
         const track = stream.getVideoTracks()[0];
@@ -430,7 +431,7 @@ export default function CameraUI() {
   return (
     <div className="h-full w-full bg-black flex flex-col">
       <div className="relative flex-1 overflow-hidden">
-        <video ref={videoRef} autoPlay playsInline className="h-full w-full object-cover" />
+        <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
         <canvas ref={canvasRef} className="hidden" />
 
         {(!isCameraReady || (mode === 'AR' && !model)) && (
@@ -540,5 +541,3 @@ export default function CameraUI() {
     </div>
   );
 }
-
-    
