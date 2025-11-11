@@ -7,6 +7,7 @@ import { X, Loader2, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import Map, { Marker } from 'react-map-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface PhotoLocationViewProps {
   imageSrc: string;
@@ -67,20 +68,19 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
 
   return (
     <motion.div
-      className="absolute inset-0 bg-black/60 backdrop-blur-md z-10 flex flex-col items-center justify-center p-4 gap-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      className="absolute inset-0 bg-black/60 backdrop-blur-md z-10 flex flex-col items-center justify-center p-4 gap-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      transition={{ duration: 0.3 }}
     >
       <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-10 w-10 rounded-full bg-black/30 text-white hover:bg-black/50" onClick={onBack}>
           <X className="h-5 w-5" />
       </Button>
       
       <motion.div
-        initial={{ scale: 0.95, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.95, y: 20 }}
-        transition={{ duration: 0.2 }}
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
         className="w-full max-w-sm"
       >
         <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border-2 border-white/50 shadow-2xl">
@@ -89,9 +89,6 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
       </motion.div>
 
       <motion.div
-        initial={{ y: 50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.1 }}
         className="w-full max-w-sm bg-background/80 backdrop-blur-lg p-4 rounded-xl border border-white/10"
       >
         <h3 className="font-semibold text-foreground flex items-center gap-2 mb-2">
