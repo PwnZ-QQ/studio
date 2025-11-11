@@ -66,8 +66,6 @@ export const useCameraStore = create<CameraState>((set) => ({
   setMode: (mode) => set({ mode }),
   setFacingMode: (facingMode) => set(state => ({ 
     facingMode: typeof facingMode === 'function' ? facingMode(state.facingMode) : facingMode,
-    isTorchOn: false, // Turn off torch when flipping camera
-    hasTorch: false, 
   })),
   setCapturedImage: (image) => set({ capturedImage: image }),
   setIsCameraReady: (isReady) => set({ isCameraReady: isReady }),
@@ -82,3 +80,5 @@ export const useCameraStore = create<CameraState>((set) => ({
   setIsTorchOn: (isTorchOn) => set({ isTorchOn }),
   reset: () => set(initialState),
 }));
+
+    

@@ -345,13 +345,14 @@ export default function CameraUI() {
     <motion.button
       onClick={handleCapture}
       disabled={!isCameraReady || mode === 'QR' || (mode === 'AR' && !model)}
-      className={cn("w-20 h-20 rounded-full bg-background/30 p-1.5 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-        isRecording && "p-0"
-      )}
+      className="w-16 h-16 rounded-full bg-white/30 p-1 backdrop-blur-sm flex items-center justify-center ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
       aria-label={t('capture_button_label')}
       whileTap={{ scale: 0.9 }}
     >
-      <motion.div className={cn("w-full h-full rounded-full bg-background")}
+      <motion.div 
+        className={cn("w-full h-full rounded-full",
+          mode === 'VIDEO' ? 'bg-red-500' : 'bg-white'
+        )}
         animate={{ 
           scale: isRecording ? 0.6 : 1,
           borderRadius: isRecording ? '20%' : '50%'
@@ -362,11 +363,11 @@ export default function CameraUI() {
   );
 
   const ModeSwitcher = () => (
-    <div className="flex items-center justify-center gap-4 text-sm font-medium text-white/80 bg-black/30 backdrop-blur-sm p-2 rounded-full">
-      <button onClick={() => handleModeChange('QR')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'QR' && 'text-accent font-semibold bg-white/10')}>{t('mode_qr')}</button>
-      <button onClick={() => handleModeChange('PHOTO')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'PHOTO' && 'text-accent font-semibold bg-white/10')}>{t('mode_photo')}</button>
-      <button onClick={() => handleModeChange('VIDEO')} className={cn("transition-colors px-2 py-1 rounded-full", mode === 'VIDEO' && 'text-accent font-semibold bg-white/10')}>{t('mode_video')}</button>
-      <button onClick={() => handleModeChange('AR')} className={cn("transition-colors flex items-center gap-1 px-2 py-1 rounded-full", mode === 'AR' && 'text-accent font-semibold bg-white/10')}>
+    <div className="flex items-center justify-center gap-6 text-sm font-medium text-white/80">
+      <button onClick={() => handleModeChange('QR')} className={cn("transition-colors", mode === 'QR' && 'text-accent font-semibold')}>{t('mode_qr')}</button>
+      <button onClick={() => handleModeChange('PHOTO')} className={cn("transition-colors", mode === 'PHOTO' && 'text-accent font-semibold')}>{t('mode_photo')}</button>
+      <button onClick={() => handleModeChange('VIDEO')} className={cn("transition-colors", mode === 'VIDEO' && 'text-accent font-semibold')}>{t('mode_video')}</button>
+      <button onClick={() => handleModeChange('AR')} className={cn("transition-colors flex items-center gap-1", mode === 'AR' && 'text-accent font-semibold')}>
         <Wand2 className="h-4 w-4" /> {t('mode_ar')}
       </button>
     </div>
@@ -374,7 +375,7 @@ export default function CameraUI() {
 
   const VideoPreview = () => (
     <motion.div
-        className="absolute inset-0 bg-black/60 backdrop-blur-md z-20 flex flex-col items-center justify-center p-4"
+        className="absolute inset-0 bg-black/80 backdrop-blur-md z-20 flex flex-col items-center justify-center p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -487,19 +488,19 @@ export default function CameraUI() {
         <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
             <LanguageSwitcher />
              {hasTorch && (
-                <Button variant="ghost" size="icon" onClick={toggleTorch} className={cn("text-white bg-black/20 backdrop-blur-sm hover:bg-black/40 hover:text-white rounded-full", isTorchOn && "text-accent")}>
-                    {isTorchOn ? <ZapOff className="h-6 w-6" /> : <Zap className="h-6 w-6" />}
+                <Button variant="ghost" size="icon" onClick={toggleTorch} className={cn("text-white bg-black/30 backdrop-blur-sm hover:bg-black/40 hover:text-white rounded-full h-10 w-10", isTorchOn && "text-accent bg-accent/20")}>
+                    {isTorchOn ? <ZapOff className="h-5 w-5" /> : <Zap className="h-5 w-5" />}
                 </Button>
             )}
         </div>
         <div className="absolute top-4 right-4 z-10">
-            <Button variant="ghost" size="icon" onClick={handleFlipCamera} className="text-white bg-black/20 backdrop-blur-sm hover:bg-black/40 hover:text-white rounded-full">
-                <SwitchCamera className="h-6 w-6" />
+            <Button variant="ghost" size="icon" onClick={handleFlipCamera} className="text-white bg-black/30 backdrop-blur-sm hover:bg-black/40 hover:text-white rounded-full h-10 w-10">
+                <SwitchCamera className="h-5 w-5" />
             </Button>
         </div>
 
         {zoomCapabilities && (
-          <div className="absolute bottom-28 left-4 right-4 z-10 flex items-center gap-2">
+          <div className="absolute bottom-40 left-4 right-4 z-10 flex items-center gap-2">
             <ZoomOut className="h-5 w-5 text-white" />
             <Slider
               min={zoomCapabilities.min}
@@ -513,11 +514,10 @@ export default function CameraUI() {
           </div>
         )}
         
-        <div className="absolute bottom-4 left-0 right-0 z-10 flex flex-col items-center justify-center gap-4">
-            <ShutterButton />
+        <div className="absolute bottom-0 left-0 right-0 z-10 h-36 bg-gradient-to-t from-black/80 to-transparent flex flex-col items-center justify-end gap-4 pb-5">
             <ModeSwitcher />
+            <ShutterButton />
         </div>
-
       </div>
       
       <AnimatePresence>
@@ -540,3 +540,5 @@ export default function CameraUI() {
     </div>
   );
 }
+
+    
