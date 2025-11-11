@@ -18,7 +18,7 @@ type Position = {
   longitude: number;
 };
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGV2LXRlYW0tYXJ0ZWZ1c2lvbiIsImEiOiJjbHh2cWJpczIycDVvMmtwZ2g0dGxlcnhxIn0.DA3r2A8S6qT5c1I-sy9bOQ';
 
 export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationViewProps) {
   const t = useTranslations('PhotoLocationView');
@@ -67,13 +67,13 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
 
   return (
     <motion.div
-      className="absolute inset-0 bg-black/60 backdrop-blur-md z-10 flex flex-col items-center justify-center p-4 gap-6"
+      className="absolute inset-0 bg-black/60 backdrop-blur-md z-10 flex flex-col items-center justify-center p-4 gap-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-10 w-10 rounded-full bg-black/30 text-white" onClick={onBack}>
-        <X className="h-5 w-5" />
+      <Button variant="ghost" size="icon" className="absolute top-4 right-4 h-10 w-10 rounded-full bg-black/30 text-white hover:bg-black/50" onClick={onBack}>
+          <X className="h-5 w-5" />
       </Button>
       
       <motion.div
@@ -99,7 +99,7 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
             {t('location_title')}
         </h3>
         <div className="h-48 w-full rounded-md overflow-hidden bg-muted">
-          {position ? (
+          {isClient && position ? (
             <a href={`https://www.google.com/maps/search/?api=1&query=${position?.latitude},${position?.longitude}`} target="_blank" rel="noopener noreferrer">
               {mapComponent}
             </a>
