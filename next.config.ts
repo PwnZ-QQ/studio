@@ -29,8 +29,14 @@ const nextConfig = {
                 pathname: '/**',
             },
             {
+                protocol: 'https' ,
+                hostname: 'api.mapbox.com' ,
+                port: '',
+                pathname: '/**',
+            },
+            {
                 protocol: 'https',
-                hostname: 'api.mapbox.com',
+                hostname: 'lh3.googleusercontent.com',
                 port: '',
                 pathname: '/**',
             }
