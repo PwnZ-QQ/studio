@@ -6,9 +6,9 @@ import { Button } from './ui/button';
 import { X, Loader2, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+import type L from 'leaflet';
 
 // Fix for default icon path issue with webpack
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
@@ -25,12 +25,20 @@ type Position = {
   lng: number;
 };
 
+// Dynamically import map components to avoid SSR issues
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+
 export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationViewProps) {
   const t = useTranslations('PhotoLocationView');
   const [position, setPosition] = useState<Position | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -43,17 +51,20 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
     );
     
     // This is a hack to fix the default icon issue with Leaflet in Next.js
-    const DefaultIcon = L.icon({
-        iconRetinaUrl: iconRetinaUrl.src,
-        iconUrl: iconUrl.src,
-        shadowUrl: shadowUrl.src,
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        tooltipAnchor: [16, -28],
-        shadowSize: [41, 41],
-    });
-    L.Marker.prototype.options.icon = DefaultIcon;
+    (async () => {
+        const L = (await import('leaflet')).default;
+        const DefaultIcon = L.icon({
+            iconRetinaUrl: iconRetinaUrl.src,
+            iconUrl: iconUrl.src,
+            shadowUrl: shadowUrl.src,
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            tooltipAnchor: [16, -28],
+            shadowSize: [41, 41],
+        });
+        L.Marker.prototype.options.icon = DefaultIcon;
+    })();
 
   }, []);
 
@@ -95,7 +106,7 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
             {t('location_title')}
         </h3>
         <div className="h-48 w-full rounded-md overflow-hidden bg-muted">
-            {position && (
+            {isClient && position && (
                 <MapContainer center={position} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
                     <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -108,8 +119,8 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
                     </Marker>
                 </MapContainer>
             )}
-            {error && <div className="h-full w-full flex items-center justify-center text-sm text-destructive">{t('location_error')}</div>}
-            {!position && !error && (
+            {isClient && error && <div className="h-full w-full flex items-center justify-center text-sm text-destructive">{t('location_error')}</div>}
+            {isClient && !position && !error && (
                 <div className="h-full w-full flex items-center justify-center text-sm text-muted-foreground">
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {t('loading_location')}
