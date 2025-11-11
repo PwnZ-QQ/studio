@@ -19,8 +19,6 @@ type Position = {
   longitude: number;
 };
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGV2LXRlYW0tYXJ0ZWZ1c2lvbiIsImEiOiJjbHh2cWJpczIycDVvMmtwZ2g0dGxlcnhxIn0.DA3r2A8S6qT5c1I-sy9bOQ';
-
 export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationViewProps) {
   const t = useTranslations('PhotoLocationView');
   const [position, setPosition] = useState<Position | null>(null);
@@ -49,7 +47,7 @@ export default function PhotoLocationView({ imageSrc, onBack }: PhotoLocationVie
     if (!isClient || !position) return null;
     return (
       <Map
-        mapboxAccessToken={MAPBOX_TOKEN}
+        mapboxAccessToken="pk.eyJ1IjoiZGV2LXRlYW0tYXJ0ZWZ1c2lvbiIsImEiOiJjbHh2cWJpczIycDVvMmtwZ2g0dGxlcnhxIn0.DA3r2A8S6qT5c1I-sy9bOQ"
         initialViewState={{
           ...position,
           zoom: 14,

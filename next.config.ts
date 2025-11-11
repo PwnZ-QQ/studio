@@ -27,12 +27,6 @@ const nextConfig = {
                 hostname: 'picsum.photos',
                 port: '',
                 pathname: '/**',
-            },
-            {
-                protocol: 'https' ,
-                hostname: 'api.mapbox.com' ,
-                port: '',
-                pathname: '/**',
             }
         ],
     },
